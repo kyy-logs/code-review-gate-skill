@@ -1,20 +1,21 @@
-# 异常处理与日志规范
+# Exception handling and logging guidelines
 
-## 异常处理规范
+## Exception handling
 
-### 异常捕获
+### Exception catching
+**Detection mode**: semantic
 
-**禁止空catch块（MULT-EXC-001）：**
+**Empty catch blocks are forbidden (MULT-EXC-001):**
 
 ```java
-// 错误：吞掉异常
+// Wrong: swallows the exception
 try {
     doSomething();
 } catch (Exception e) {
-    // 空块
+    // empty block
 }
 
-// 正确：至少记录日志
+// Correct: at least log it
 try {
     doSomething();
 } catch (Exception e) {
@@ -23,9 +24,10 @@ try {
 }
 ```
 
-### 事务回滚
+### Transaction rollback
+**Detection mode**: semantic
 
-**事务代码catch异常后必须手动回滚（MULT-EXC-002）：**
+**Catching an exception in transactional code requires a manual rollback (MULT-EXC-002):**
 
 ```java
 @Transactional(rollbackFor = Exception.class)
@@ -41,65 +43,69 @@ public void updateUser(User user) {
 }
 ```
 
-### finally规则
+### finally rules
+**Detection mode**: semantic
 
-**finally中禁止return（MULT-EXC-003）：**
+**Do not return from finally (MULT-EXC-003):**
 
 ```java
-// 错误
+// Wrong
 try {
     return 1;
 } finally {
-    return 2;  // 禁止！会覆盖try中的return
+    return 2;  // Forbidden! Overrides the return in try
 }
 
-// 正确
+// Correct
 try {
     return 1;
 } finally {
-    // 可以执行清理操作，但不能return
+    // Cleanup is allowed here, but no return
 }
 ```
 
-### 资源关闭
+### Resource cleanup
+**Detection mode**: semantic
 
-**finally块必须关闭资源，JDK7+用try-with-resources（MULT-EXC-004）：**
+**The finally block must close resources; on JDK 7+ use try-with-resources (MULT-EXC-004):**
 
 ```java
-// 正确
+// Correct
 try (InputStream is = new FileInputStream(file);
      OutputStream os = new FileOutputStream(output)) {
-    // 使用资源
+    // use the resource
 } catch (IOException e) {
     log.error("IO error", e);
 }
 ```
 
-### 预检查原则
+### Pre-check principle
+**Detection mode**: semantic
 
-**预检查优于异常捕获（MULT-EXC-005）：**
+**Pre-checks are better than exception catching (MULT-EXC-005):**
 
 ```java
-// 错误
+// Wrong
 try {
     return user.getName().toUpperCase();
 } catch (NullPointerException e) {
     return null;
 }
 
-// 正确
+// Correct
 if (user != null && user.getName() != null) {
     return user.getName().toUpperCase();
 }
 return null;
 ```
 
-### 异常分类
+### Exception classification
+**Detection mode**: semantic
 
-**区分稳定代码和非稳定代码（MULT-EXC-007）：**
+**Distinguish stable code from unstable code (MULT-EXC-007):**
 
 ```java
-// 稳定代码：捕获特定异常
+// Stable code: catch a specific exception
 try {
     userDao.insert(user);
 } catch (DuplicateKeyException e) {
@@ -107,7 +113,7 @@ try {
     throw new BusinessException("用户已存在");
 }
 
-// 非稳定代码：捕获更广泛的异常
+// Unstable code: catch a broader exception
 try {
     thirdPartyService.call();
 } catch (Exception e) {
@@ -116,15 +122,16 @@ try {
 }
 ```
 
-### 级联调用NPE
+### Cascading-call NPEs
+**Detection mode**: semantic
 
-**级联调用易NPE，用Optional（MULT-EXC-008）：**
+**Cascading calls are prone to NPEs; use Optional (MULT-EXC-008):**
 
 ```java
-// 错误
+// Wrong
 String cityName = user.getAddress().getCity().getName();
 
-// 正确
+// Correct
 String cityName = Optional.ofNullable(user)
     .map(User::getAddress)
     .map(Address::getCity)
@@ -132,86 +139,92 @@ String cityName = Optional.ofNullable(user)
     .orElse("未知");
 ```
 
-## 日志规范
+## Logging
 
-### 日志框架
+### Logging framework
+**Detection mode**: semantic
 
-**依赖SLF4J门面，禁直接用Log4j/Logback API（MULT-LOG-140）：**
+**Depend on the SLF4J facade; do not use Log4j/Logback APIs directly (MULT-LOG-140):**
 
 ```java
-// 错误：直接使用Log4j/Logback
+// Wrong: use Log4j/Logback directly
 import org.apache.log4j.Logger;
 
-// 正确：使用SLF4J
+// Correct: use SLF4J
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 private static final Logger log = LoggerFactory.getLogger(UserService.class);
 ```
 
-### 日志内容
+### Log content
+**Detection mode**: semantic
 
-**异常日志包含现场信息+堆栈（MULT-LOG-141）：**
+**Exception logs must include context and the stack trace (MULT-LOG-141):**
 
 ```java
-// 正确
+// Correct
 log.error("参数: {}，异常: {}", userId, e.getMessage(), e);
 
-// 或使用占位符
+// Or use placeholders
 log.error("更新用户失败, userId={}, error={}", userId, e.getMessage(), e);
 ```
 
-### 条件输出
+### Conditional output
+**Detection mode**: semantic
 
-**trace/debug/info用条件输出或占位符（MULT-LOG-142）：**
+**Use conditional output or placeholders for trace/debug/info (MULT-LOG-142):**
 
 ```java
-// 错误：字符串拼接
+// Wrong: string concatenation
 log.debug("Processing user: " + userId);
 
-// 正确：占位符
+// Correct: placeholder
 log.debug("Processing user: {}", userId);
 
-// 或条件输出
+// Or conditional output
 if (log.isDebugEnabled()) {
     log.debug("Processing user: {}", userId);
 }
 ```
 
-### 敏感数据脱敏
+### Sensitive-data masking
+**Detection mode**: semantic
 
-**日志必须脱敏（MULT-SEC-025/026）：**
+**Logs must be masked (MULT-SEC-025/026):**
 
 ```java
-// 错误：直接打印敏感信息
+// Wrong: log sensitive information directly
 log.info("User login: phone={}, idCard={}", phone, idCard);
 
-// 正确：脱敏处理
+// Correct: mask it
 log.info("User login: phone={}, idCard={}", 
     SensitiveDataMasker.maskPhone(phone), 
     SensitiveDataMasker.maskIdCard(idCard));
 
-// 或使用脱敏工具
+// Or use the masking helper
 log.info("User login: {}", SensitiveDataMasker.maskUserInfo(user));
 ```
 
-### 日志级别
+### Log levels
+**Detection mode**: semantic
 
-**生产环境禁debug，有选择输出info（MULT-LOG-146）：**
+**Disable debug in production; enable info selectively (MULT-LOG-146):**
 
 ```java
-// 错误
+// Wrong
 log.debug("Detailed info");
 
-// 正确
+// Correct
 log.info("Operation info");
 log.warn("Warning info");
 log.error("Error info", e);
 ```
 
-### 重复日志
+### Duplicate logs
+**Detection mode**: semantic
 
-**避免重复打印日志，设置additivity=false（MULT-LOG-143）：**
+**Avoid duplicate log output; set additivity=false (MULT-LOG-143):**
 
 ```xml
 <!-- logback.xml -->

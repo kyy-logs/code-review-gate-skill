@@ -1,173 +1,172 @@
 ---
 name: code-review
-description: 写完代码、提交前或合并 PR 时使用；用户说“帮我 review”“提交前检查一下”“看看这次改动”“PR review”，或要求严格审查/合入门禁时也使用。
+description: Use when code has been written, before committing, or when merging a PR; also when the user says "review my code", "check before commit", "take a look at this change", "PR review", or asks for a strict review/merge gate.
 ---
 
-# 代码审查
+# Code Review
 
-> 检查代码缺陷、测试质量和变更影响，并确认已发现的问题是否闭环。
+> Check for code defects, test quality, and change impact, and confirm that the issues found are closed.
 
-## 资源与执行位置
+## Resources and Execution Location
 
-- `references/`、`scripts/`、`assets/` 均相对本次读取的 `SKILL.md` 所在目录。
-- shell 命令从**被审项目根目录**执行；`docs/work/`、代码路径与项目规则均属于被审项目。
-- 下文的 `CODE_REVIEW_SKILL_DIR` 指 skill 安装目录的绝对路径。每次 shell 调用都设置它，
-  或直接用实际绝对路径替换；不要假定不同 shell 调用会保留变量。
-- 脚本需要 Bash、Git、awk、grep、sed 等基础命令。通过 `bash` 调用，无需依赖可执行位。
-- 报告解析需要 Python 3.9+ 和 PyYAML；默认调用 `python`，可用 `CODE_REVIEW_PYTHON` 指定解释器绝对路径。
-  安装方式见发布仓库 README；仓库内入口为 `scripts/install.py`。
+- `references/`, `scripts/`, and `assets/` are relative to the directory containing the `SKILL.md` read for this run.
+- Run shell commands from the **reviewed project root**; `docs/work/`, code paths, and project rules all belong to the reviewed project.
+- `CODE_REVIEW_SKILL_DIR` below is the absolute path of the skill installation directory. Set it on every shell invocation, or replace it directly with the actual absolute path; do not assume variables persist across different shell invocations.
+- Scripts require basic commands such as Bash, Git, awk, grep, and sed. Invoke them via `bash`; no executable bit is needed.
+- Report parsing requires Python 3.9+ and PyYAML; `python` is invoked by default, and `CODE_REVIEW_PYTHON` can specify the interpreter's absolute path.
+  For installation, see the release repository README; the in-repo entry point is `scripts/install.py`.
 
-## 适用范围
+## Scope
 
-- 审查影响代码行为的功能、bug 修复、重构或配置变更。
-- 不影响代码行为的纯文档、格式或错别字改动可跳过。
-- 测试失败或尚未运行时仍可静态审查；报告须注明测试状态，不得宣称已满足合入条件。
+- Review functional, bug-fix, refactoring, or configuration changes that affect code behavior.
+- Pure documentation, formatting, or typo changes that do not affect code behavior may be skipped.
+- Static review is still possible when tests fail or have not been run; the report must state the test status and must not claim that merge conditions are met.
 
-## 输入
+## Inputs
 
-| 输入 | 必需 | 说明 |
+| Input | Required | Description |
 |---|---|---|
-| git 仓库 + 可 diff 的改动 | 是 | 明确审查未提交改动，还是已提交的 base/head 区间 |
-| 验收标准 | 否 | 提供时按“可选收尾”逐条勾验 |
-| 覆盖率数据 / 命令 | 否 | 提供时用于 `test-coverage` 的可选测量；未提供时仍执行相关测试代码的静态质量检查 |
-| 规则包 | 否 | 默认 skill 内置 `references/rules/`；可用 `CODE_REVIEW_RULES_DIR` 覆盖 |
-| 审查标识 | 否 | `{slug}`，默认 `<日期>-<主题>` |
+| git repository + diffable changes | Yes | Specify whether to review uncommitted changes or a committed base/head range |
+| Acceptance criteria | No | When provided, check them off one by one under "Optional Wrap-up" |
+| Coverage data / command | No | When provided, used for the optional measurement in `test-coverage`; without it, static quality checks on the relevant test code still run |
+| Rule pack | No | Defaults to the skill's built-in `references/rules/`; can be overridden with `CODE_REVIEW_RULES_DIR` |
+| Review identifier | No | `{slug}`, defaults to `<date>-<topic>` |
 
-产物根目录为 `docs/work`，本次产物写入 `docs/work/active/{slug}/`。
+The artifact root is `docs/work`, and this run's artifacts are written to `docs/work/active/{slug}/`.
 
-## 审查流程
+## Review Process
 
-> 检查项不写死在本文件里，由 `references/probes.yaml` 注册表驱动。
-> 探针的实现细节在 `references/probes/<探针名>.md`；本文件只管**编排**。
+> Check items are not hardcoded in this file; they are driven by the `references/probes.yaml` registry.
+> Probe implementation details are in `references/probes/<probe-name>.md`; this file only handles **orchestration**.
 >
-> **执行边界：默认进行静态审查。** 覆盖率检查优先复用已有报告；
-> 需要测量时，可在本轮任务允许的范围内执行覆盖率命令。其他检查仍只读证据。
-> 审查过程中不得修改被审源代码。测试与 CI 输出作为审查证据，
-> **测试全绿不等于行为正确**。
+> **Execution boundary: static review by default.** For coverage checks, prefer reusing an existing report;
+> when measurement is needed, coverage commands may be run within what this round's task allows. Other checks remain read-only evidence.
+> Do not modify the reviewed source code during review. Test and CI output are review evidence;
+> **all tests green does not mean the behavior is correct**.
 
-1. **确定审查范围**：
+1. **Determine the review scope**:
 
-   **选择模式**，未指定时默认审查未提交改动。下文的 base/head 均记录为具体 commit ID。
+   **Choose a mode**; when unspecified, review uncommitted changes by default. The base/head below are recorded as concrete commit IDs.
 
-   - **未提交改动（worktree）**：base 为当前 HEAD。
-     用 `git diff <base> --` 收集暂存与未暂存改动；
-     用 `git ls-files --others --exclude-standard -z` 收集未跟踪文件，
-     并将其完整内容作为新增代码审查。
-   - **已提交区间（commits）**：按用户指定的 base/head，
-     用 `git diff <base> <head> --` 收集差异。
-     省略 head 时使用当前 HEAD，只审查该提交区间。
+   - **Uncommitted changes (worktree)**: base is the current HEAD.
+     Use `git diff <base> --` to collect staged and unstaged changes;
+     use `git ls-files --others --exclude-standard -z` to collect untracked files,
+     and review their full contents as newly added code.
+   - **Committed range (commits)**: use the user-specified base/head,
+     and collect the diff with `git diff <base> <head> --`.
+     When head is omitted, use the current HEAD and review only that commit range.
 
-   **读取对应源码**：
-   - worktree 模式读取工作区文件。
-   - commits 模式用 `git show <head>:<路径>` 读取目标版本，
-     需要旧版本时读取 base。文件扫描仅使用与目标版本一致的磁盘文件。
+   **Read the corresponding source**:
+   - In worktree mode, read the working tree files.
+   - In commits mode, use `git show <head>:<path>` to read the target version,
+     and read base when an older version is needed. File scans use only on-disk files consistent with the target version.
 
-   **记录并交接**：保存模式、base、目标（工作区或 head）、变更文件清单及差异，
-   供所有探针使用。程序处理文件清单时使用 NUL 分隔，并逐路径引用传参。
+   **Record and hand off**: save the mode, base, target (working tree or head), changed-file list, and diff,
+   for use by all probes. Use NUL separators when processing the file list programmatically, and pass each path as a quoted argument.
 
-   收集完成后，再创建报告目录 `docs/work/active/{slug}/probes/`，
-   避免将新生成的报告纳入待审查文件。
+   After collection completes, create the report directory `docs/work/active/{slug}/probes/`
+   so that newly generated reports are not included among the files to review.
 
-2. **读注册表，确定探针清单**：Read `references/probes.yaml`，按 `requires` 判断：
-   - 指定了但缺失 / 不可读 → `error`
-   - 未提供可选输入 → `skipped`，写明缺什么
-   - 可用 → 执行
+2. **Read the registry and determine the probe list**: Read `references/probes.yaml` and decide by `requires`:
+   - Specified but missing / unreadable → `error`
+   - Optional input not provided → `skipped`, stating what is missing
+   - Available → execute
 
-3. **并行执行探针**：
+3. **Run probes in parallel**:
 
-   **派发**：主执行器按注册表为每个探针派发独立代理，提供审查范围、diff、项目根、skill 路径及该探针的输入和 `params`，并在派发提示中包含上文“执行边界”和本步骤“执行”段的公共约束。
-   代理读取注册项 `file` 指向的说明和 `references/output-schema.md`，按参数执行。
-   并发槽位不足时分批执行；没有独立代理能力时串行执行并记录限制。
+   **Dispatch**: the main executor dispatches an independent agent per probe according to the registry, providing the review scope, diff, project root, skill path, and that probe's inputs and `params`, and including in the dispatch prompt the common constraints from "Execution boundary" above and the "Execution" part of this step.
+   The agent reads the instructions pointed to by the registry entry's `file` and `references/output-schema.md`, and executes according to the parameters.
+   Run in batches when concurrent slots are insufficient; if independent agents are unavailable, run serially and record the limitation.
 
-   **执行**：代理只检查自己的探针，不重跑完整流程或再派发代理；源码版本遵循步骤 1。
-   finding 须说明本次改动如何引入或触发该问题；无关的存量问题单独说明，不纳入本轮 finding 清单及计数。
-   复用已读上下文，仅按需补读；独立只读查询尽量合并，有依赖的查询逐步执行，首次读取源码时保留准确行号和必要上下文。
-   本地搜索限于被审仓库、明确提供的关联目录及依赖坐标对应的缓存路径；缺失或不可读时记录具体证据缺口，
-   不扩大到磁盘根目录或用户目录，也不在没有新线索时反复搜索。
-   只写 `docs/work/active/{slug}/probes/<探针名>.json`，不写共享报告或指标。
-   返回前须等待自己启动的后台任务结束，或停止已不再需要的任务并确认退出，再通知完成。
+   **Execution**: an agent checks only its own probe, and does not re-run the whole process or dispatch further agents; the source version follows step 1.
+   A finding must explain how this change introduced or triggered the issue; unrelated pre-existing issues are described separately and are not included in this round's finding list or counts.
+   Reuse context already read and only read more as needed; merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
+   Local search is limited to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates; when something is missing or unreadable, record the specific evidence gap,
+   without expanding to the disk root or the user directory, and without repeating searches when there is no new lead.
+   Write only `docs/work/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics.
+   Before returning, wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited, then report completion.
 
-   **交接**：每个探针均须有 JSON，错误或跳过时写明原因；执行错误时保留已发现问题，其他探针继续。
-   代理启动失败或未返回有效结果时，由主执行器记录 `error` 及原因，不沿用该探针的旧结果。
-   有可靠计时时记录 `duration`，各探针耗时之和不代表本轮墙钟时间。
-   `test-coverage` 通过返回消息交接有效覆盖率的报告路径、目标版本、分子/分母及百分比，
-   由主执行器执行 `collect-metrics coverage`；未测量时不补数值。
+   **Handoff**: every probe must have a JSON; state the reason when errored or skipped; on execution errors, keep the issues already found and let other probes continue.
+   The return message briefly states the JSON path, the actual checked scope, unverified items, and specific evidence gaps, without repeating the findings; the main executor incorporates the relevant limitations into the final report.
+   If an agent fails to start or does not return a valid result, the main executor records `error` and the reason, and does not reuse that probe's old results.
+   Record `duration` when reliable timing is available; the sum of per-probe durations does not represent this round's wall-clock time.
+   `test-coverage` hands off the report path, target version, numerator/denominator, and percentage for valid coverage via its return message,
+   and the main executor runs `collect-metrics coverage`; do not fill in numbers when unmeasured.
 
-   **汇总**：等待所有代理结束，由主执行器统一同步；`required` 从注册表读取，各级数量从 JSON 逐条计算，不改写原始结果或手填计数。
-   暂不做跨探针去重，按原始 finding ID 计数，可能包含同根因问题的重复记录：
+   **Aggregation**: wait for all agents to finish, and let the main executor synchronize uniformly; `required` is read from the registry, counts at each level are computed item by item from the JSON, and raw results are not rewritten and counts are not hand-filled.
+   Do not deduplicate across probes yet; count by original finding ID, which may include duplicate records of the same root cause:
    ```bash
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" sync {slug} --probes
    ```
-   此步使上一批对账状态失效，尚不记录 reconciliation。
-   历史重复记录保留原始 ID、证据及计数；展示独立问题数量时按同一根因和后果归组并列明对应 ID，不因重复提高严重级别，也不以展示数量替代探针或对账计数。
+   This step invalidates the previous batch's reconciliation state, and reconciliation is not recorded yet.
+   Historical duplicate records retain their original IDs, evidence, and counts; when showing the number of distinct issues, group them by the same root cause and consequence and list the corresponding IDs, without raising severity due to duplication or substituting the displayed count for probe or reconciliation counts.
 
-4. **reconciliation 完整性检查**：
-   从探针 JSON 自动派生最终计数：
+4. **Reconciliation completeness check**:
+   Derive the final counts automatically from the probe JSON:
    ```bash
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" sync {slug}
    ```
-   `required` 只控制该探针的 `failed/error` 执行状态是否直接阻塞，不改变 finding 的闭环要求。
-   任意探针的 high finding 都进入 reconciliation，未闭环仍阻塞合入；medium/low 记入报告，不计入对账总数：
+   `required` only controls whether that probe's `failed/error` execution status directly blocks; it does not change the finding closure requirement.
+   High findings from any probe enter reconciliation and still block merge until closed; medium/low are recorded in the report and excluded from the reconciliation total:
    ```text
-   RECONCILE_TOTAL   = high finding 总数
-   RECONCILE_DONE    = 其中 status 为 reconciled 或 false-positive 的条数
+   RECONCILE_TOTAL   = total number of high findings
+   RECONCILE_DONE    = number of those whose status is reconciled or false-positive
    RECONCILE_PENDING = TOTAL - DONE
    ```
-   没有 high 也须执行，显式记录零结果，不能用旧计数或手填数字代替。
-   格式错误须先修正；记录缺失、重复 ID 或状态矛盾时同步失败，不写计数，不以旧结果放行。
-   有未处置问题（`RECONCILE_PENDING > 0`）时，本轮仍交付报告并列明阻塞项，不得推进合入。
-   后续修复任务完成后，再复审受影响的部分；重派上限见 `references/probes.yaml` 的 `execution.max_retry`。
+   Run it even when there are no high findings, explicitly recording the zero result; do not substitute old counts or hand-filled numbers.
+   Fix format errors first; if records are missing, IDs are duplicated, or statuses conflict, synchronization fails, no counts are written, and the old result must not be used to pass.
+   When there are unresolved issues (`RECONCILE_PENDING > 0`), still deliver the report this round and list the blocking items; do not proceed toward merge.
+   After follow-up fix tasks complete, re-review the affected parts; see `execution.max_retry` in `references/probes.yaml` for the re-dispatch limit.
 
-5. **汇总报告**：
+5. **Compile the report**:
 
-   按模板填写审查范围、解释、修复建议和限制，原始 JSON 不嵌入正文；提供了验收标准时，先完成逐条勾验。
+   Fill in the review scope, explanation, fix suggestions, and limitations per the template; do not embed raw JSON in the body; when acceptance criteria are provided, complete the item-by-item check-off first.
 
-   执行以下命令，从 JSON 生成报告事实区、校验展示并取得最终答复摘要：
+   Run the following commands to generate the report's facts section from the JSON, validate the display, and obtain the final answer summary:
    ```bash
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" render-report {slug}
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" verify-report {slug}
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" summary {slug}
    ```
 
-   脚本只更新报告 §5、§6 的 `code-review:probes` / `gate` 标记区域，保留其他正文和原始 JSON。渲染先校验再原子更新，可重复执行；标记缺失或重复时停止。校验覆盖 ID、位置、证据、严重级别、状态和计数。
+   The scripts update only the `code-review:probes` / `gate` marker regions in report sections 5 and 6, preserving other body text and raw JSON. Rendering validates before an atomic update and can be repeated; it stops when markers are missing or duplicated. Validation covers IDs, locations, evidence, severity, status, and counts.
 
-   `summary` 先校验报告，一致后才输出机器摘要。最终答复中的 high/medium/low 数量、finding ID 和阻塞结论须以摘要为准，不新增未记录的问题，不遗漏已记录的 high。向用户交付报告、阻塞项及未验证内容，可补充解释和建议，不得改写自动区域或推翻已知阻塞事实。
+   `summary` validates the report first and outputs the machine summary only when it is consistent. The high/medium/low counts, finding IDs, and blocking conclusion in the final answer must follow the summary; do not add unrecorded issues or omit recorded high findings. Deliver the report, blocking items, and unverified content to the user; you may add explanations and suggestions, but must not rewrite the automatic regions or overturn known blocking facts.
 
-   “无已记录阻塞项”不代表验收、覆盖率、测试或 CI 已通过。`gate-pass {slug} code-review` 与有审查记录的 `archive` 均先校验报告，再同步计数，不自动修正被改写的展示。
+   "No recorded blocking items" does not mean acceptance, coverage, tests, or CI have passed. Both `gate-pass {slug} code-review` and `archive` with review records validate the report first, then synchronize counts, and do not automatically fix a rewritten display.
 
 ## <HARD-GATE>
 
-**以下任一条件命中，阻塞合入**。本轮报告列明阻塞项，下表为后续处置要求：
+**Any of the following conditions blocks merge**. This round's report lists the blocking items; the table below gives the follow-up handling requirements:
 
-| 阻塞条件 | 后续动作 |
+| Blocking condition | Follow-up action |
 |---|---|
-| required 探针为 `failed` / `error`（`PROBE_REQUIRED_FAILED > 0`） | 处理已发现的问题或执行错误后，重跑对应探针 |
-| high finding 未完成 reconciliation（`RECONCILE_PENDING > 0`） | 按步骤 4 处理，修复后重派受影响的探针 |
-| reconcile 从未上报（`RECONCILE_REPORTED=0`） | 完成步骤 4；没有 high 也须执行最终同步 |
-| 提供了覆盖率数据且低于基线（默认增量行覆盖率 < 85%） | 列明覆盖缺口，补测试后重新审查 |
-| 提供了验收标准且未全过，或标准本身有歧义 | 列明未通过项；有歧义先澄清，不得自行勾验通过 |
-| 有 high finding 停在 `wontfix` | 按输出契约完成处置，不能用“不修”冲抵待办 |
+| A required probe is `failed` / `error` (`PROBE_REQUIRED_FAILED > 0`) | Handle the issues found or the execution error, then re-run the corresponding probe |
+| A high finding has not completed reconciliation (`RECONCILE_PENDING > 0`) | Handle per step 4, and re-dispatch the affected probes after fixing |
+| Reconciliation was never reported (`RECONCILE_REPORTED=0`) | Complete step 4; run the final synchronization even when there are no high findings |
+| Coverage data was provided and is below baseline (default incremental line coverage < 85%) | List the coverage gaps, add tests, and re-review |
+| Acceptance criteria were provided and not all pass, or the criteria themselves are ambiguous | List the failing items; clarify ambiguity first, and do not self-check them as passing |
+| A high finding remains in `wontfix` | Complete handling per the output contract; "won't fix" cannot offset a pending item |
 
-执行状态与输入错误的判定见 `references/output-schema.md` 第 4 节。
+See section 4 of `references/output-schema.md` for how execution status and input errors are determined.
 
-脚本验证报告记录与计数的一致性，不能证明检查是否充分。
+Script validation verifies consistency between report records and counts; it cannot prove the checks were sufficient.
 
-## 输出契约
+## Output Contract
 
-- **主报告**：`docs/work/active/{slug}/code-review.md`，按
-  `assets/code-review.md` 的章节和填写要求生成。
-- **机器记录**：`docs/work/active/{slug}/probes/<探针名>.json`，
-  格式见 `references/output-schema.md`；人类报告的事实区域由它们派生。
+- **Main report**: `docs/work/active/{slug}/code-review.md`, generated per the sections and filling requirements in `assets/code-review.md`.
+- **Machine records**: `docs/work/active/{slug}/probes/<probe-name>.json`,
+  format per `references/output-schema.md`; the human report's facts section is derived from them.
 
-历史记录须明确迁移为独立 JSON；不从自由文本猜测或自动补零，也不同时读取旧内嵌区块。
+Historical records must be explicitly migrated to standalone JSON; do not infer from free text or auto-fill zeros, and do not read old embedded blocks at the same time.
 
-## 可选收尾
+## Optional Wrap-up
 
-以下事项按条件执行，不作为每轮必经步骤：
+The following items are done conditionally, not as mandatory steps each round:
 
-- **验收**：提供了验收标准时，在最终结论前逐条勾验；没有则跳过并说明。
-- **lessons**：有 `lessons/` 目录，且本次有实际发生、值得复用的经验时记录，说明具体问题、原因和处理方式：
-  - 实现过程中踩的坑 → `lessons/pitfalls.md`
-  - AI 产出被纠正的案例 → `lessons/bad-cases.md`
-  - 新的架构决策 → `lessons/arch-decisions.md`
-- **归档**：如需归档，将 `docs/work/active/{slug}/` 移到 `docs/work/archive/{YYYY}/`。
+- **Acceptance**: when acceptance criteria are provided, check them off one by one before the final conclusion; otherwise skip and say so.
+- **lessons**: when a `lessons/` directory exists and something that actually happened this round is worth reusing, record it with the specific problem, cause, and handling:
+  - Pitfalls hit during implementation → `lessons/pitfalls.md`
+  - Cases where AI output was corrected → `lessons/bad-cases.md`
+  - New architectural decisions → `lessons/arch-decisions.md`
+- **Archive**: when archiving is needed, move `docs/work/active/{slug}/` to `docs/work/archive/{YYYY}/`.

@@ -1,56 +1,62 @@
-# 安全规范
+# Security guidelines
 
-## HIGH 安全规则
+## HIGH security rules
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 | 错误示例 | 正确示例 |
+| Rule ID | Rule | Description | Wrong example | Correct example |
 |--------|------|------|---------|---------|
-| SEC-101 | SQL 参数绑定 | 禁止字符串拼接 SQL | `"SELECT * FROM users WHERE id = " + userId` | `"SELECT * FROM users WHERE id = ?"` + PreparedStatement |
-| SEC-102 | 禁止硬编码凭证 | API 密钥 / 密码 / Token 禁止硬编码 | `String password = "123456"` | `System.getenv("DB_PASSWORD")` |
-| SEC-103 | 输入验证 | 所有用户输入必须验证 | 直接使用 request 参数 | 使用 `@Valid` / `@Validated` |
-| SEC-104 | 敏感数据脱敏 | 日志禁止打印敏感信息 | `log.info("user: {}", user)` | `log.info("phone: {}", SensitiveDataMasker.maskPhone(phone))` |
-| SEC-105 | CSRF 保护 | 状态变更接口必须 CSRF 验证 | 直接 POST | 添加 CSRF Token 验证 |
-| SEC-106 | 权限校验 | 所有用户数据接口必须权限控制 | 直接返回数据 | 校验 userId 匹配 |
-| SEC-107 | XSS 防护 | 禁止 v-html / dangerouslySetInnerHTML | `<div v-html="content">` | 使用安全渲染方式 |
+| SEC-101 | SQL parameter binding | String-concatenated SQL is forbidden | `"SELECT * FROM users WHERE id = " + userId` | `"SELECT * FROM users WHERE id = ?"` + PreparedStatement |
+| SEC-102 | No hard-coded credentials | API keys / passwords / tokens must not be hard-coded | `String password = "123456"` | `System.getenv("DB_PASSWORD")` |
+| SEC-103 | Input validation | All user input must be validated | Use request parameters directly | Use `@Valid` / `@Validated` |
+| SEC-104 | Sensitive-data masking | Logs must not print sensitive information | `log.info("user: {}", user)` | `log.info("phone: {}", SensitiveDataMasker.maskPhone(phone))` |
+| SEC-105 | CSRF protection | State-changing endpoints must verify CSRF | Direct POST | Add CSRF token verification |
+| SEC-106 | Permission checks | All user-data endpoints must enforce authorization | Return data directly | Verify that userId matches |
+| SEC-107 | XSS protection | v-html / dangerouslySetInnerHTML are forbidden | `<div v-html="content">` | Use a safe rendering method |
 
-## 认证授权
+## Authentication and authorization
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| AUTH-101 | 权限校验 | 所有用户数据接口必须权限控制，防水平越权 |
-| AUTH-102 | 身份验证 | 外部系统接入统一认证，内部系统接入 SSO |
-| AUTH-103 | Token 存储 | 禁止放 URL 参数，使用 Cookie / POST body |
-| AUTH-104 | Cookie 安全 | HttpOnly=true，Secure=true（HTTPS） |
-| AUTH-105 | 禁止信任客户端 | 禁止直接使用客户端传来的 userId / roleId 鉴权 |
+| AUTH-101 | Permission checks | All user-data endpoints must enforce authorization and prevent horizontal privilege escalation |
+| AUTH-102 | Identity verification | External systems use unified authentication; internal systems use SSO |
+| AUTH-103 | Token storage | Must not be placed in URL parameters; use Cookie / POST body |
+| AUTH-104 | Cookie security | HttpOnly=true, Secure=true (HTTPS) |
+| AUTH-105 | Do not trust the client | Do not use client-supplied userId / roleId directly for authorization |
 
-## 数据安全
+## Data security
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| DATA-101 | 敏感数据脱敏 | 手机号、身份证、银行卡号等必须脱敏展示 |
-| DATA-102 | 数据分级 | 按项目数据分级标准决定是否脱敏 / 水印 |
-| DATA-103 | 号码保护 | 涉及双方真实号码的场景接入号码保护服务 |
-| DATA-104 | 查询鉴权 | 禁止仅用业务 ID 查询，必须联查 userId / tenantId |
+| DATA-101 | Sensitive-data masking | Phone numbers, ID numbers, bank card numbers, etc. must be masked in displays |
+| DATA-102 | Data classification | Decide whether to mask / watermark according to the project's data-classification standard |
+| DATA-103 | Number protection | Scenarios involving the real numbers of both parties must use the number-protection service |
+| DATA-104 | Query authorization | Do not query by business ID alone; always join userId / tenantId |
 
-## 接口安全
+## API security
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| API-101 | 防重放 | 短信、支付等平台资源必须防重放 |
-| API-102 | 限频 | 可遍历参数接口必须限频防刷 |
-| API-103 | 获取真实 IP | 使用可信代理头，禁止直接信任 X-Forwarded-For |
-| API-104 | CORS | Access-Control-Allow-Origin 禁止 `*` |
+| API-101 | Replay protection | Platform resources such as SMS and payments must be replay-protected |
+| API-102 | Rate limiting | Endpoints with enumerable parameters must be rate-limited to prevent abuse |
+| API-103 | Real client IP | Use trusted proxy headers; do not trust X-Forwarded-For directly |
+| API-104 | CORS | Access-Control-Allow-Origin must not be `*` |
 
-## 前端安全
+## Frontend security
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| WEB-101 | XSS 防护 | 禁止 v-html、dangerouslySetInnerHTML |
-| WEB-102 | CSRF 防护 | 表单 / AJAX 必须 CSRF 验证 |
-| WEB-103 | 请求方法 | 非查询操作禁止 GET 请求 |
+| WEB-101 | XSS protection | v-html and dangerouslySetInnerHTML are forbidden |
+| WEB-102 | CSRF protection | Forms / AJAX must verify CSRF |
+| WEB-103 | Request methods | Non-query operations must not use GET |
 
-## 密钥管理
+## Key management
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| KEY-101 | 密钥配置 | 禁止硬编码，接入 KMS / 密钥管理服务 |
-| KEY-102 | 私钥保护 | 禁止硬编码 `PRIVATE_KEY = "..."` |
+| KEY-101 | Key configuration | No hard-coding; use KMS / a key-management service |
+| KEY-102 | Private-key protection | Hard-coding `PRIVATE_KEY = "..."` is forbidden |

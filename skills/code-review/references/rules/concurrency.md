@@ -1,14 +1,15 @@
-# 并发处理规范
+# Concurrency guidelines
 
-## 线程池创建
+## Thread pool creation
+**Detection mode**: semantic
 
-**禁止使用Executors创建线程池（MULT-CONC-001）：**
+**Do not create thread pools with Executors (MULT-CONC-001):**
 
 ```java
-// 错误：可能导致OOM
+// Wrong: may cause OOM
 ExecutorService executor = Executors.newFixedThreadPool(10);
 
-// 正确：明确设置所有参数
+// Correct: set all parameters explicitly
 ThreadPoolExecutor executor = new ThreadPoolExecutor(
     10,  // corePoolSize
     20,  // maximumPoolSize
@@ -20,26 +21,28 @@ ThreadPoolExecutor executor = new ThreadPoolExecutor(
 );
 ```
 
-## SimpleDateFormat线程安全
+## SimpleDateFormat thread safety
+**Detection mode**: semantic
 
 ```java
-// 错误：线程不安全
+// Wrong: not thread-safe
 private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
 
-// 正确方案1：ThreadLocal
+// Correct option 1: ThreadLocal
 private static final ThreadLocal<SimpleDateFormat> sdf = 
     ThreadLocal.withInitial(() -> new SimpleDateFormat("yyyy-MM-dd"));
 
-// 正确方案2：使用Java 8 DateTimeFormatter（推荐）
+// Correct option 2: use Java 8 DateTimeFormatter (recommended)
 private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 ```
 
-## 锁顺序
+## Lock ordering
+**Detection mode**: semantic
 
-**多资源加锁必须保持一致顺序，防止死锁（MULT-CONC-002）：**
+**Locking multiple resources must follow a consistent order to prevent deadlocks (MULT-CONC-002):**
 
 ```java
-// 错误：可能导致死锁
+// Wrong: may deadlock
 public void transfer(Account from, Account to, int amount) {
     synchronized (from) {
         synchronized (to) {
@@ -49,7 +52,7 @@ public void transfer(Account from, Account to, int amount) {
     }
 }
 
-// 正确：按固定顺序加锁
+// Correct: lock in a fixed order
 public void transfer(Account from, Account to, int amount) {
     Account first = from.getId() < to.getId() ? from : to;
     Account second = from.getId() < to.getId() ? to : from;
@@ -62,16 +65,17 @@ public void transfer(Account from, Account to, int amount) {
 }
 ```
 
-## 并发修改
+## Concurrent modification
+**Detection mode**: semantic
 
-**并发修改同一记录必须加锁或乐观锁（MULT-CONC-003）：**
+**Concurrent modification of the same record must use a lock or optimistic locking (MULT-CONC-003):**
 
 ```java
-// 乐观锁方案
+// Optimistic locking approach
 @Update("UPDATE account SET balance = #{balance}, version = version + 1 WHERE id = #{id} AND version = #{version}")
 int updateWithVersion(Account account);
 
-// 重试逻辑（不少于3次）
+// Retry logic (at least 3 times)
 int retry = 0;
 while (retry < 3) {
     Account account = accountDao.getById(id);
@@ -83,43 +87,46 @@ while (retry < 3) {
 }
 ```
 
-## TOCTOU防护
+## TOCTOU protection
+**Detection mode**: semantic
 
-**Check-Then-Act操作必须原子化（MULT-CONC-012）：**
+**Check-Then-Act operations must be atomic (MULT-CONC-012):**
 
 ```java
-// 错误：非原子操作
+// Wrong: non-atomic operation
 if (account.getBalance() >= amount) {  // Check
-    account.debit(amount);  // Act - 余额可能已变化！
+    account.debit(amount);  // Act - the balance may have changed!
 }
 
-// 正确：使用数据库乐观锁或分布式锁
+// Correct: use a database optimistic lock or distributed lock
 @Update("UPDATE account SET balance = balance - #{amount} WHERE id = #{id} AND balance >= #{amount}")
 int debitWithCheck(@Param("id") Long id, @Param("amount") Long amount);
 ```
 
-## 高并发优化
+## High-concurrency optimization
+**Detection mode**: semantic
 
-**高并发避免用"等于"判断作为中断/退出条件（MULT-CONC-004）：**
+**In high-concurrency code, do not use equality checks as interruption/exit conditions (MULT-CONC-004):**
 
 ```java
-// 错误：可能无限循环
+// Wrong: may loop forever
 while (count == 0) {
-    // 可能永远不退出
+    // may never exit
 }
 
-// 正确：使用区间判断
+// Correct: use a range check
 while (count > 0) {
-    // 有明确退出条件
+    // explicit exit condition
 }
 ```
 
-## 单例模式线程安全
+## Singleton thread safety
+**Detection mode**: semantic
 
-**单例对象需保证线程安全（MULT-CONC-005）：**
+**Singleton objects must be thread-safe (MULT-CONC-005):**
 
 ```java
-// 双重检查锁（需要volatile）
+// Double-checked locking (requires volatile)
 public class Singleton {
     private static volatile Singleton instance;
     
@@ -138,32 +145,34 @@ public class Singleton {
 }
 ```
 
-## 线程资源
+## Thread resources
+**Detection mode**: semantic
 
-**线程资源必须通过线程池提供，禁止显式创建线程（MULT-CONC-007）：**
+**Thread resources must be provided through thread pools; do not create threads explicitly (MULT-CONC-007):**
 
 ```java
-// 错误
+// Wrong
 new Thread(new Runnable() {
     @Override
     public void run() { }
 }).start();
 
-// 正确
+// Correct
 executor.execute(() -> {
     // ...
 });
 ```
 
-## Random多线程
+## Random in multithreaded code
+**Detection mode**: semantic
 
-**避免Random多线程使用，JDK7+用ThreadLocalRandom（MULT-CONC-011）：**
+**Avoid sharing Random across threads; on JDK 7+ use ThreadLocalRandom (MULT-CONC-011):**
 
 ```java
-// 错误
+// Wrong
 Random random = new Random();
 int value = random.nextInt(100);
 
-// 正确
+// Correct
 int value = ThreadLocalRandom.current().nextInt(100);
 ```

@@ -1,70 +1,70 @@
-# probe: impact-analysis（影响分析）
+# probe: impact-analysis (impact analysis)
 
-**required: false** ｜ **requires: []**
+**required: false** | **requires: []**
 
-检查本次改动对调用方、契约、性能和架构的影响。
+Check this change's impact on callers, contracts, performance, and architecture.
 
-## 1. 被改动方法的 inbound 调用方（fan-in）
+## 1. Inbound callers of changed methods (fan-in)
 
-对本次 diff 中**签名或调用方可见行为发生变化**的方法，逐个追踪调用方：
+For methods in this diff whose **signature or caller-visible behavior changed**, trace callers one by one:
 
-使用主流程确定的审查范围和目标版本。
-方法声明变化仅用于辅助定位；还须检查方法体变更引起的返回值含义、异常和副作用变化。
-不同语言的调用形态不同，须结合实际代码确认。
+Use the review scope and target version determined by the main flow.
+Method declaration changes are only used to help locate; also check changes in return-value meaning, exceptions, and side effects caused by method body changes.
+Call forms differ by language and must be confirmed against the actual code.
 
-对涉及上述变化的方法，回答：
+For methods involving the above changes, answer:
 
-| 问题 | 为什么问 |
+| Question | Why ask |
 |---|---|
-| 谁在调用它？（数量） | fan-in 越大，改动的爆炸半径越大 |
-| 调用方**在本仓库之外**吗？ | 跨仓库调用方无法随之改动，契约必须兼容 |
-| 调用方是否也需要改？ | 有需要适配但未改的调用方时，说明具体调用路径、触发条件与后果 |
-| 有没有同名的重载被误伤？ | 重载解析变化是典型的静默破坏 |
+| Who calls it? (how many) | The larger the fan-in, the larger the blast radius of the change |
+| Are callers **outside this repository**? | Cross-repository callers cannot change along with it, so the contract must stay compatible |
+| Do callers also need changes? | When callers need adaptation but were not changed, describe the specific call path, trigger conditions, and consequences |
+| Is an overload with the same name affected by mistake? | Overload resolution changes are a classic silent break |
 
-`depth=1`（注册表参数）：默认只追踪**一层**调用方。
+`depth=1` (registry parameter): by default, trace only **one level** of callers.
 
-## 2. 契约变更
+## 2. Contract changes
 
-- 对外接口（HTTP / RPC / MQ 消息体）的字段增删改？
-- 数据库 schema 变更是否**向后兼容**？（加列可空 vs 改类型 vs 删列）
-- 配置文件 / 环境变量的键名变化？（多环境矩阵，见设计文档）
-- 序列化格式变化？（JSON 字段名、时间格式）
+- Were fields added, removed, or changed in external interfaces (HTTP / RPC / MQ message bodies)?
+- Is the database schema change **backward compatible**? (nullable column added vs type change vs column dropped)
+- Did config file / environment variable key names change? (multi-environment matrix, see the design doc)
+- Did the serialization format change? (JSON field names, time format)
 
-先确认变更是否破坏既有契约，说明受影响的调用方式、数据或部署条件及具体后果，
-再按 `references/output-schema.md` 的 severity 判据定级。
-兼容变更不因未另写兼容策略就判为 high。
+First confirm whether the change breaks an existing contract, and describe the affected call forms, data, or deployment conditions and the specific consequences,
+then grade per the severity criteria in `references/output-schema.md`.
+A compatible change is not graded high merely because no separate compatibility strategy was written.
 
-## 3. 性能
+## 3. Performance
 
-对本次改动涉及的路径进行静态性能检查，不以是否提供设计文档为前提。
+Perform a static performance check on the paths involved in this change; it does not depend on whether a design doc is provided.
 
-关注点：新增的循环内查询 / N+1、全表扫描、无界集合、
-同步阻塞调用、缓存击穿、批量操作的批次大小。
+Focus areas: newly added in-loop queries / N+1, full table scans, unbounded collections,
+synchronous blocking calls, cache breakdown, and batch sizes for bulk operations.
 
-涉及缓存或代理时，须追到实际 I/O 边界；未确认数据库访问，不得将方法调用次数等同于新增 SQL 次数。
+When caches or proxies are involved, trace to the actual I/O boundary; without confirming database access, do not equate the number of method calls with the number of new SQL queries.
 
-若设计文档有性能指标，对照相关实现，并仅在有对应实测数据时判定指标是否达标。
-缺少设计指标或实测数据时，记录验证限制，不因材料缺失本身判失败；
-有指标但无实测数据时，注明“性能指标未验证”，不得仅凭代码检查声称达标。
+If the design doc has performance targets, compare them against the relevant implementation, and judge whether targets are met only when corresponding measured data exists.
+When design targets or measured data are missing, record the verification limitation and do not fail it merely for missing material;
+when targets exist but no measured data does, note "performance targets unverified" and do not claim they are met based on code inspection alone.
 
-本探针不自动运行压测。发现风险时，说明具体代码路径、
-适用的数据规模或调用条件，以及可能造成的后果。
+This probe does not run load tests automatically. When a risk is found, describe the specific code path,
+the applicable data scale or call conditions, and the possible consequences.
 
-## 4. 架构影响
+## 4. Architectural impact
 
-针对本次改动涉及的模块和相关调用、依赖路径，按项目已有架构约定检查：
+For modules and related call/dependency paths involved in this change, check against the project's existing architectural conventions:
 
-- 是否把无关职责塞进同一模块。
-- 是否引入循环依赖，或破坏项目已有的依赖方向。
-- 公共接口变化后，现有实现或调用方是否仍能正常替换、使用。
-- 新增抽象和中间层是否服务于当前需求。
+- Is unrelated responsibility crammed into the same module?
+- Are circular dependencies introduced, or the project's existing dependency direction broken?
+- After a public interface change, can existing implementations or callers still be replaced and used normally?
+- Do new abstractions and intermediate layers serve the current need?
 
-发现问题时，引用具体模块、依赖或调用路径，说明受影响的契约或约束及实际后果。
-不得仅凭“不符合某个设计原则”就判为高风险，也不强制项目采用固定分层。
-仅属结构优化建议、尚未证实具体破坏性影响的，单独记录为非阻塞建议。
+When a problem is found, cite the specific module, dependency, or call path, and describe the affected contract or constraint and the actual consequence.
+Do not rate it high risk merely for "not following some design principle", and do not force the project to adopt a fixed layering.
+Things that are only structural optimization suggestions without proven concrete breaking impact are recorded separately as non-blocking suggestions.
 
-## 5. 反模式
+## 5. Anti-patterns
 
-- ❌ 看到方法名变了就报 high，却不确认有没有调用方 —— 这是噪音，会淹没真问题
-- ❌ 只查本仓库调用方，忽略对外接口的**外部**消费方
-- ❌ 把「理论上可能有人调用」当成 finding（要**具体**到哪个调用方）
+- ❌ Reporting high just because a method name changed, without confirming whether there are callers — that is noise and drowns out real problems
+- ❌ Checking only in-repository callers and ignoring **external** consumers of external interfaces
+- ❌ Treating "someone could theoretically call it" as a finding (it must be **specific** about which caller)

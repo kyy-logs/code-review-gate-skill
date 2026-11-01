@@ -1,54 +1,54 @@
-# probe: repo-guard（仓库规范）
+# probe: repo-guard (repository standards)
 
-**required: true** ｜ **requires: rules** ｜ `read_only: true`
+**required: true** | **requires: rules** | `read_only: true`
 
-## 1. 选择规则包
+## 1. Select the rule pack
 
-1. `$CODE_REVIEW_RULES_DIR` 非空时，使用指定路径；路径不存在或不可读时记为 `error`，不回退。
-2. 未指定时，若 `<项目根>/.code-review/rules/` 目录存在则使用，否则使用 skill 内置的 `references/rules/`。
+1. When `$CODE_REVIEW_RULES_DIR` is non-empty, use the specified path; if the path does not exist or is unreadable, record `error` and do not fall back.
+2. When unspecified, use `<project root>/.code-review/rules/` if that directory exists; otherwise use the skill's built-in `references/rules/`.
 
-先读所选规则包的 `index.md`，了解规则主题。项目自带规则包会**整体替代**内置规则包，不合并。
+First read the selected rule pack's `index.md` to learn the rule topics. A project-provided rule pack **entirely replaces** the built-in one; they are not merged.
 
-## 2. 规则扫描与候选复核
+## 2. Rule scanning and candidate review
 
-审查范围和代码版本以主流程 `SKILL.md` 的“确定审查范围”为准。
+The review scope and code version follow "Determine the review scope" in the main flow's `SKILL.md`.
 
-1. **选择文件**：从变更清单中选择 `.java` / `.ts` / `.tsx` / `.vue`，
-   包含新增文件，排除已删除文件；无适用文件时转入第 3 节。
-2. **运行扫描**：将文件路径逐个作为独立参数传给
-   `bash "$CODE_REVIEW_SKILL_DIR/scripts/rule-grep"`。
-   脚本扫描文件全文，命中位置可能包含旧代码。
-3. **AI 复核**：结合对应规则、代码上下文和本轮差异，确认是否确实违规。
-   仅将本次改动引入或触发的问题纳入 finding；无关旧问题单独记录，不计入本轮计数。
+1. **Select files**: choose `.java` / `.ts` / `.tsx` / `.vue` from the change list,
+   including added files and excluding deleted files; when no applicable files exist, go to section 3.
+2. **Run the scan**: pass the file paths one by one as independent arguments to
+   `bash "$CODE_REVIEW_SKILL_DIR/scripts/rule-grep"`.
+   The script scans the full file text, and hits may include old code.
+3. **AI review**: with the corresponding rule, code context, and this round's diff, confirm whether a violation actually exists.
+   Include only issues introduced or triggered by this change in the findings; record unrelated old issues separately and exclude them from this round's counts.
 
-无法用模式判断的相关规则，转入第 3 节。
-磁盘文件与审查目标版本不一致时，读取目标版本源码，按第 3 节进行 AI 语义检查。
+Rules that cannot be decided by pattern go to section 3.
+When on-disk files differ from the review target version, read the target version's source and perform the AI semantic check per section 3.
 
-扫描只提供候选；命中不等于违规，未命中不等于合规。
+The scan only provides candidates; a hit is not a violation, and a miss is not compliance.
 
-## 3. 按需加载与 AI 语义检查
+## 3. On-demand loading and AI semantic checks
 
-AI 语义检查指由 AI 读取规则正文、diff 及相关代码上下文，判断规则是否适用、代码是否确实违规。
+An AI semantic check means the AI reads the rule text, the diff, and the relevant code context to judge whether the rule applies and whether the code actually violates it.
 
-根据索引、项目语言、改动主题及扫描命中项，按需加载对应规则文件。
-散文类、不可机判但与改动相关的规则也须加载，不能只检查扫描命中项。
-缺省检查主题包括：
+Load the corresponding rule files on demand based on the index, project language, change topic, and scan hits.
+Prose rules that cannot be machine-judged but are relevant to the change must also be loaded; do not check only the scan hits.
+Default check topics include:
 
-- SQL 注入
+- SQL injection
 - XSS
-- 鉴权与权限隔离
-- 敏感数据处理
-- 硬编码凭证
-- 幂等性
+- Authentication and permission isolation
+- Sensitive data handling
+- Hardcoded credentials
+- Idempotency
 
-具体要求以本轮选中的规则文件为准。
+The specific requirements follow the rule files selected this round.
 
-对已选规则与本次改动逐条比对，报告注明实际加载的规则文件和检查范围。
-只对 HIGH 级别规则产出 finding。
-发现规范违规时记录**适用的规则 ID、文件、行号、违规描述**。
+Compare each selected rule against this change, and note in the report the rule files actually loaded and the checked scope.
+Produce findings only for HIGH-severity rules.
+When a standards violation is found, record the **applicable rule ID, file, line number, and violation description**.
 
-通用行为正确性检查见 [behavior-review](behavior-review.md)。
+For general behavioral correctness checks, see [behavior-review](behavior-review.md).
 
-## 4. 判定与上报
+## 4. Judgment and reporting
 
-规则包目录不存在或一个规则文件都读不到时，记为 `error`。
+Record `error` when the rule pack directory does not exist or not a single rule file can be read.

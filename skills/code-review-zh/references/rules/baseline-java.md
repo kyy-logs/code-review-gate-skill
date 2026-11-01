@@ -39,7 +39,7 @@ SQL 必须使用参数绑定，禁止把用户输入拼进语句。
 
 按业务 ID 查询用户数据时，必须同时带上当前用户或租户条件。
 
-**检测模式**: 无（人工判断：查询条件里是否只有 orderId / id，没有 userId / tenantId）
+**检测方式**: semantic（人工判断：查询条件里是否只有 orderId / id，没有 userId / tenantId）
 
 ## 日志与数据
 

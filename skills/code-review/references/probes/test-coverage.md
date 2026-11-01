@@ -1,69 +1,69 @@
-# probe: test-coverage（测试质量与增量覆盖率）
+# probe: test-coverage (test quality and incremental coverage)
 
-**required: true** ｜ **requires: []**
+**required: true** | **requires: []**
 
-每轮由 AI 检查相关测试的质量；覆盖率是可选分项。
-不要求每轮运行测试或测量覆盖率。
+Each round, the AI checks the quality of the relevant tests; coverage is an optional sub-item.
+Tests need not be run, nor coverage measured, every round.
 
-## 1. 输入与边界
+## 1. Inputs and boundaries
 
-- 按 `SKILL.md` 的“确定审查范围”定位目标版本的相关测试源码及配置。
-- 覆盖率报告和测量命令均可选。
+- Locate the relevant test source and configuration for the target version per "Determine the review scope" in `SKILL.md`.
+- Coverage reports and measurement commands are both optional.
 
-先确认可用材料是完整项目还是仅 diff / 部分源码 / 最小快照。
-仅有部分材料时，只能说明“当前材料中未找到相关测试”，缺失部分记为未验证，不得断言原项目没有测试。
+First confirm whether the available material is a complete project or only a diff / partial source / minimal snapshot.
+With only partial material, you can only say "no relevant tests found in the current material"; the missing part is recorded as unverified, and you must not assert that the original project has no tests.
 
-## 2. 测试质量检查（每轮执行）
+## 2. Test quality checks (every round)
 
-先对照预期行为，区分实现回归与测试自身的问题。既有测试能正确揭示本次回归时，记录其覆盖情况，将行为疑点及证据交回主执行器；不能仅因测试未修改就认定测试有缺陷。
+First compare against expected behavior to distinguish implementation regressions from problems in the tests themselves. When existing tests correctly reveal this regression, record their coverage and hand the behavioral suspicion and evidence back to the main executor; do not conclude that the tests are defective merely because they were not modified.
 
-结合相关测试和被测代码，检查测试本身：
+Using the relevant tests and the code under test, check the tests themselves:
 
-- **断言**：是否验证真实结果，能区分正确实现与相关错误，而非仅执行代码或无条件断言 `true`。
-- **场景**：是否覆盖本次改动的重要边界和失败路径；重试、并发按实际适用性检查。
-- **稳定性**：是否依赖执行顺序、不稳定时间或不可控的外部环境。
-- **测试变更**：是否删除、跳过、注释或弱化相关测试；结合原因及替代验证判断是否丢失有效检查，不能仅凭删除或 skip / pending 标记判为 high。
+- **Assertions**: do they verify real results and distinguish a correct implementation from the relevant errors, rather than merely executing code or unconditionally asserting `true`?
+- **Scenarios**: do they cover the important boundaries and failure paths of this change; check retries and concurrency according to actual applicability.
+- **Stability**: do they depend on execution order, unstable time, or an uncontrollable external environment?
+- **Test changes**: were relevant tests deleted, skipped, commented out, or weakened? Judge with the reason and any substitute verification whether valid checks were lost; do not mark it high based merely on a deletion or a skip / pending marker.
 
-仅对已证实的测试自身缺陷或场景 / 断言缺口产出 finding，说明位置、预期依据及风险；缺口描述以实际核对的测试范围为限。
-预期行为尚有契约争议时，记录未验证项，不预设断言结果。按 `references/output-schema.md` 定级，缺少测试本身不自动判为 high。
+Produce findings only for proven defects in the tests themselves or for scenario / assertion gaps, stating the location, expected-behavior basis, and risk; describe the gap within the actually checked test scope.
+When expected behavior is still under contract dispute, record an unverified item and do not presuppose assertion outcomes. Grade per `references/output-schema.md`; a missing test is not automatically high.
 
-## 3. 可选覆盖率检查与上报
+## 3. Optional coverage check and reporting
 
-1. 优先复用与审查目标版本、模块对应的已有覆盖率报告。
-2. 没有对应报告时，仅在项目已有测量方式且本轮任务允许时执行；否则记“未测量”，仍完成测试质量检查。
-3. 有有效报告时，计算本次 diff 中生产源码新增或修改的可执行行覆盖率：
-   `diff 行覆盖率 = 已覆盖的改动可执行行数 / 改动可执行行总数 × 100%`。
-   报告写明分子、分母和结果，不使用全文件覆盖率；处理 JaCoCo XML 时读取文末细节。
+1. Prefer reusing an existing coverage report that corresponds to the review's target version and modules.
+2. When no corresponding report exists, run measurement only if the project already has a measurement method and this round's task allows it; otherwise record "not measured" and still complete the test quality check.
+3. With a valid report, compute the executable-line coverage of production source lines added or modified by this diff:
+   `diff line coverage = covered executable changed lines / total executable changed lines × 100%`.
+   The report must state the numerator, denominator, and result; do not use whole-file coverage; when processing JaCoCo XML, read the details at the end.
 
-| 覆盖率情况 | 记录与处理 |
+| Coverage situation | Record and handling |
 |---|---|
-| 已测量的 diff 行覆盖率 ≥ 85% | 达标 |
-| 已测量的 diff 行覆盖率 < 85% | high finding，阻塞合入 |
-| 分支覆盖率 | 目标 80%，不达标只提示，不参与阻塞或评分降档 |
-| 确认没有可执行增量行 | 覆盖率记“不适用”，说明原因，不填 0% 或 100% |
-| 已指定报告不可读、无法解析、数据不全或版本不匹配，或测量命令失败 | `error`，不得改记“未测量”或“不适用” |
+| Measured diff line coverage ≥ 85% | Meets target |
+| Measured diff line coverage < 85% | high finding, blocks merge |
+| Branch coverage | Target 80%; falling short is advisory only and does not block or lower scores |
+| Confirmed no executable incremental lines | Record coverage as "not applicable", explain why, and do not fill in 0% or 100% |
+| A specified report is unreadable, unparsable, incomplete, or version-mismatched, or the measurement command fails | `error`; must not be recorded as "not measured" or "not applicable" |
 
-代理交接有效实测数值，由主执行器执行以下命令上报；`--line` 仅接收 diff 行覆盖率：
+The agent hands off valid measured values, and the main executor reports them with the following command; `--line` accepts only diff line coverage:
 
 ```bash
-bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" coverage {slug} --line {diff行覆盖率}
+bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" coverage {slug} --line {diff-line-coverage}
 ```
 
-有分支数值时可加 `--branch {分支覆盖率}`，或仅上报该项。
-未测量或不适用的指标省略，不补 0；两项均无有效数值时不调用。单项上报仅更新该项，脚本不验证统计口径。
+Add `--branch {branch-coverage}` when a branch value exists, or report only that item.
+Omit metrics that are unmeasured or not applicable; do not fill in 0. Do not call it when neither item has a valid value. A single-item report updates only that item, and the script does not verify the statistical basis.
 
-## 4. 报告
+## 4. Reporting
 
-分开记录测试质量、覆盖率状态和未验证项。
-`passed` 不代表测试已运行或覆盖率已测量。
+Record test quality, coverage status, and unverified items separately.
+`passed` does not mean the tests were run or coverage was measured.
 
-## 5. JaCoCo 报告解析细节（处理 XML 时读取）
+## 5. JaCoCo report parsing details (read when processing XML)
 
-1. 按项目源集识别生产源码和测试，提取目标版本生产源码的新增或修改行，排除删除行。
-2. 按模块、源码路径和改动行号匹配 `<sourcefile>` / `<line nr="…" mi="…" ci="…">`。
-   `mi + ci > 0` 计入分母，`ci > 0` 计为已覆盖。
-3. 每个“模块 + 源码路径 + 行号”只计一次；汇总后计算比例，不平均各文件百分比。
-4. 缺少必要数据记 `error`，不得当作非可执行行排除或记为“不适用”。
+1. Identify production and test source per the project source sets, extract added or modified lines of the target version's production source, and exclude deleted lines.
+2. Match `<sourcefile>` / `<line nr="…" mi="…" ci="…">` by module, source path, and changed line numbers.
+   `mi + ci > 0` counts toward the denominator, and `ci > 0` counts as covered.
+3. Count each "module + source path + line number" only once; compute the ratio after aggregating, and do not average per-file percentages.
+4. Record `error` when required data is missing; do not exclude it as non-executable or record it as "not applicable".
 
-这是 [JaCoCo 的行覆盖口径](https://www.jacoco.org/jacoco/trunk/doc/counters.html)：
-一行至少有一条指令执行即计为已覆盖，不代表该行所有分支均被覆盖。
+This is [JaCoCo's line coverage definition](https://www.jacoco.org/jacoco/trunk/doc/counters.html):
+a line counts as covered if at least one instruction in it executed, which does not mean all branches on that line were covered.

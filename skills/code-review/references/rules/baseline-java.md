@@ -1,74 +1,75 @@
-# 公共基线（Java）
+# Common baseline (Java)
 
-最小可用规则集，覆盖安全、并发、异常三类高频问题。
-按项目实际技术栈增删；替换本文件不会影响 `SKILL.md` 的编排逻辑。
+A minimal usable rule set covering three high-frequency categories: security, concurrency, and exceptions.
+Add or remove rules according to the project's actual stack; replacing this file does not affect the orchestration logic in `SKILL.md`.
 
-## 安全
+## Security
 
-### SEC-001 [HIGH] SQL 字符串拼接
+### SEC-001 [HIGH] SQL string concatenation
 
-SQL 必须使用参数绑定，禁止把用户输入拼进语句。
+SQL must use parameter binding; user input must never be concatenated into statements.
 
-**检测模式**（任一命中即违规）:
+**Detection pattern** (any hit is a violation):
 - `Statement[^;]*execute(Query|Update)?\s*\(\s*["'][^"']*["']\s*\+`
 - `create(Query|NativeQuery)\s*\(\s*["'][^"']*["']\s*\+`
 - `["'][^"']*(SELECT|INSERT|UPDATE|DELETE)[^"']*["']\s*\+`
 
-### SEC-002 [HIGH] 硬编码凭证
+### SEC-002 [HIGH] Hard-coded credentials
 
-密码、密钥、Token 不得写在源码里。
+Passwords, keys, and tokens must not be written in source code.
 
-**检测模式**:
+**Detection pattern**:
 - `(password|passwd|secret|token|apiKey|accessKey|privateKey)\s*=\s*"[^"]{6,}"`
 
-### SEC-003 [HIGH] XSS 危险渲染
+### SEC-003 [HIGH] Dangerous XSS rendering
 
-禁止把不可信内容直接交给 HTML 渲染。
+Untrusted content must not be passed directly to HTML rendering.
 
-**检测模式**:
+**Detection pattern**:
 - `v-html|dangerouslySetInnerHTML|innerHTML\s*=`
 
-### SEC-004 [HIGH] 命令执行
+### SEC-004 [HIGH] Command execution
 
-调用系统命令前必须确认参数不来自用户输入。
+Confirm that arguments do not come from user input before invoking a system command.
 
-**检测模式**:
+**Detection pattern**:
 - `Runtime\.getRuntime\(\)\.exec\s*\(|new\s+ProcessBuilder\s*\(`
 
-### AUTH-001 [HIGH] 越权查询
+### AUTH-001 [HIGH] Missing authorization on queries
+**Detection mode**: semantic
 
-按业务 ID 查询用户数据时，必须同时带上当前用户或租户条件。
+When querying user data by business ID, include the current user or tenant condition as well.
 
-**检测模式**: 无（人工判断：查询条件里是否只有 orderId / id，没有 userId / tenantId）
+**Detection pattern**: none (manual check: whether the query condition contains only orderId / id, with no userId / tenantId)
 
-## 日志与数据
+## Logging and data
 
-### LOG-001 [HIGH] 日志打印敏感字段
+### LOG-001 [HIGH] Sensitive fields in logs
 
-身份证、手机号、银行卡、密码、Token 不得明文进日志。
+ID card numbers, phone numbers, bank card numbers, passwords, and tokens must not appear in logs in plaintext.
 
-**检测模式**:
+**Detection pattern**:
 - `log(ger)?\.(info|debug|warn|error)\([^)]*(idCard|idNo|phone|mobile|bankCard|password|token)`
 
-## 并发与异常
+## Concurrency and exceptions
 
-### CONC-001 [HIGH] 共享 SimpleDateFormat
+### CONC-001 [HIGH] Shared SimpleDateFormat
 
-`SimpleDateFormat` 不是线程安全的，不得作为静态共享实例。
+`SimpleDateFormat` is not thread-safe and must not be used as a static shared instance.
 
-**检测模式**:
+**Detection pattern**:
 - `static\s+(final\s+)?SimpleDateFormat`
 
-### CONC-002 [MEDIUM] 线程池未显式设界
+### CONC-002 [MEDIUM] Thread pool without explicit bounds
 
-使用 `Executors` 工厂方法容易产生无界队列或无限线程。
+`Executors` factory methods can easily create unbounded queues or unlimited threads.
 
-**检测模式**:
+**Detection pattern**:
 - `Executors\.(newCachedThreadPool|newFixedThreadPool)\s*\(`
 
-### ERR-001 [HIGH] 空 catch 吞异常
+### ERR-001 [HIGH] Empty catch swallows exceptions
 
-空的 catch 块会静默失败，必须至少记录或重新抛出。
+An empty catch block fails silently; it must at least log the exception or rethrow it.
 
-**检测模式**:
+**Detection pattern**:
 - `catch\s*\([^)]*\)\s*\{\s*\}`

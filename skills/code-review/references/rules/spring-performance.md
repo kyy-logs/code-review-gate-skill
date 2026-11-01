@@ -1,11 +1,12 @@
-# Spring/JPA 与性能优化规范
+# Spring/JPA and performance guidelines
 
-## Spring/JPA 最佳实践
+## Spring/JPA best practices
 
-### 参数验证
+### Parameter validation
+**Detection mode**: semantic
 
 ```java
-// 正确：使用@Valid验证
+// Correct: validate with @Valid
 @PostMapping("/users")
 public UserDTO createUser(@Valid @RequestBody UserCreateRequest request) {
     return userService.create(request);
@@ -25,10 +26,11 @@ public class UserCreateRequest {
 }
 ```
 
-### 事务管理
+### Transaction management
+**Detection mode**: semantic
 
 ```java
-// 正确：事务范围明确
+// Correct: explicit transaction scope
 @Transactional(rollbackFor = Exception.class)
 public void createUser(User user, UserProfile profile) {
     userDao.insert(user);
@@ -36,38 +38,40 @@ public void createUser(User user, UserProfile profile) {
     profileDao.insert(profile);
 }
 
-// 注意：只读操作不加事务或使用只读事务
+// Note: read-only operations should not use a transaction, or should use a read-only transaction
 @Transactional(readOnly = true)
 public User getUser(Long id) {
     return userDao.findById(id);
 }
 ```
 
-### N+1查询防护
+### N+1 query prevention
+**Detection mode**: semantic
 
 ```java
-// 错误：N+1查询
+// Wrong: N+1 queries
 List<User> users = userDao.findAll();
 for (User user : users) {
-    List<Order> orders = orderDao.findByUserId(user.getId());  // N次查询！
+    List<Order> orders = orderDao.findByUserId(user.getId());  // N queries!
     user.setOrders(orders);
 }
 
-// 正确：使用JOIN FETCH
+// Correct: use JOIN FETCH
 @Query("SELECT u FROM User u LEFT JOIN FETCH u.orders WHERE u.id IN :ids")
 List<User> findWithOrders(@Param("ids") List<Long> ids);
 
-// 或使用EntityGraph
+// Or use EntityGraph
 @Entity
 @NamedEntityGraph(name = "User.withOrders", 
     attributeNodes = @NamedAttributeNode("orders"))
 public class User { ... }
 ```
 
-### 统一异常处理
+### Unified exception handling
+**Detection mode**: semantic
 
 ```java
-// 统一异常处理
+// Unified exception handling
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     
@@ -86,26 +90,28 @@ public class GlobalExceptionHandler {
 }
 ```
 
-## 性能优化规范
+## Performance guidelines
 
-### 服务器配置
+### Server configuration
+**Detection mode**: semantic
 
-| 配置项 | 说明 | 推荐值 |
+| Setting | Description | Recommended value |
 |-------|------|-------|
-| TCP time_wait超时 | 高并发场景调小 | `net.ipv4.tcp_fin_timeout=30` |
-| 最大文件句柄数 | Linux默认1024不够 | `ulimit -n 65535` |
-| JVM HeapDump | OOM时生成堆转储 | `-XX:+HeapDumpOnOutOfMemoryError` |
+| TCP time_wait timeout | Lower it in high-concurrency scenarios | `net.ipv4.tcp_fin_timeout=30` |
+| Maximum file handles | The Linux default of 1024 is insufficient | `ulimit -n 65535` |
+| JVM HeapDump | Generate a heap dump on OOM | `-XX:+HeapDumpOnOutOfMemoryError` |
 
-### 对象创建
+### Object creation
+**Detection mode**: semantic
 
 ```java
-// 错误：循环中创建字符串
+// Wrong: create strings in a loop
 String result = "";
 for (String item : list) {
-    result += item + ",";  // 每次创建新String！
+    result += item + ",";  // creates a new String each time!
 }
 
-// 正确：使用StringBuilder
+// Correct: use StringBuilder
 StringBuilder sb = new StringBuilder();
 for (String item : list) {
     if (sb.length() > 0) sb.append(",");
@@ -113,18 +119,19 @@ for (String item : list) {
 }
 String result = sb.toString();
 
-// 或使用String.join
+// Or use String.join
 String result = String.join(",", list);
 ```
 
-### 批量操作
+### Batch operations
+**Detection mode**: semantic
 
 ```java
-// 错误：循环单条插入
+// Wrong: one insert per iteration
 for (User user : users) {
-    userDao.insert(user);  // N次IO！
+    userDao.insert(user);  // N IOs!
 }
 
-// 正确：批量插入
+// Correct: batch insert
 userDao.batchInsert(users);
 ```
