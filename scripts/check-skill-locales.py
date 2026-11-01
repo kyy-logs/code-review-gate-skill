@@ -131,6 +131,8 @@ def check(root):
         if set(en_rules) != set(zh_rules):
             errors.append('rule file inventory differs')
         for name in sorted(set(en_rules) & set(zh_rules)):
+            if name == 'index.md':
+                continue  # documentation, not a rule file; its examples may be localized
             if rule_contract(en_rules[name]) != rule_contract(zh_rules[name]):
                 errors.append('rule contract differs: references/rules/' + name)
     except (OSError, ValueError) as error:

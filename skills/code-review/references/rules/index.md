@@ -25,22 +25,23 @@ A project-provided rule pack replaces the built-in pack entirely (it is not merg
 
 ## Rule file format
 
-Each rule has one heading, followed by an optional `检测模式` line:
+Each rule has one heading, followed by an optional `Detection pattern` line:
 
 ```markdown
 ### SEC-001 [HIGH] SQL string concatenation
 
 Why this rule matters.
 
-**检测模式** (any hit is a violation):
-- `正则一`
-- `正则二`
+**Detection pattern** (any hit is a violation):
+- `regex-one`
+- `regex-two`
 ```
 
-- The heading must be `### <规则ID> [<严重级>] <标题>`; the severity is one of `HIGH` / `MEDIUM` / `LOW`
-- Backtick fragments in `检测模式` are extracted by `bash "$CODE_REVIEW_SKILL_DIR/scripts/rule-grep"` and run as regexes
-- Rules without `检测模式` do not participate in regex scanning
+- The heading must be `### <rule-id> [<severity>] <title>`; the severity is one of `HIGH` / `MEDIUM` / `LOW`
+- Backtick fragments in `Detection pattern` are extracted by `bash "$CODE_REVIEW_SKILL_DIR/scripts/rule-grep"` and run as regexes
+- Rules without a detection pattern do not participate in regex scanning
 - **The rule ID is the finding's evidence**; a judgment without an ID does not count
+- Legacy localized rule packs may use their own detection-marker label; `rule-grep` accepts the supported aliases
 
 ## Constraints
 

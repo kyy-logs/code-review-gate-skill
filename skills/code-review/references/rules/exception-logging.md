@@ -20,7 +20,7 @@ try {
     doSomething();
 } catch (Exception e) {
     log.error("Failed to do something", e);
-    throw new BusinessException("操作失败", e);
+    throw new BusinessException("operation failed", e);
 }
 ```
 
@@ -36,9 +36,9 @@ public void updateUser(User user) {
         userDao.update(user);
         userPhoneDao.update(user.getPhone());
     } catch (Exception e) {
-        log.error("更新用户失败", e);
+        log.error("failed to update user", e);
         TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-        throw new BusinessException("更新失败");
+        throw new BusinessException("update failed");
     }
 }
 ```
@@ -110,7 +110,7 @@ try {
     userDao.insert(user);
 } catch (DuplicateKeyException e) {
     log.warn("Duplicate user: {}", user.getId());
-    throw new BusinessException("用户已存在");
+    throw new BusinessException("user already exists");
 }
 
 // Unstable code: catch a broader exception
@@ -118,7 +118,7 @@ try {
     thirdPartyService.call();
 } catch (Exception e) {
     log.error("Third party call failed", e);
-    throw new ServiceException("第三方服务调用失败", e);
+    throw new ServiceException("third-party service call failed", e);
 }
 ```
 
@@ -136,7 +136,7 @@ String cityName = Optional.ofNullable(user)
     .map(User::getAddress)
     .map(Address::getCity)
     .map(City::getName)
-    .orElse("未知");
+    .orElse("unknown");
 ```
 
 ## Logging
@@ -164,10 +164,10 @@ private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
 ```java
 // Correct
-log.error("参数: {}，异常: {}", userId, e.getMessage(), e);
+log.error("params: {}, error: {}", userId, e.getMessage(), e);
 
 // Or use placeholders
-log.error("更新用户失败, userId={}, error={}", userId, e.getMessage(), e);
+log.error("failed to update user, userId={}, error={}", userId, e.getMessage(), e);
 ```
 
 ### Conditional output

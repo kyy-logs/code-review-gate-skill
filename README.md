@@ -46,7 +46,7 @@ gate behavior may change before 1.0.
   records before using them with this release.
 - **Scope:** static-first review with four probes and JSON-derived report/gate
   output. It does not replace tests, CI, or human review.
-- **Validation:** 72 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
+- **Validation:** 73 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
   end-to-end gate runs; additional probe smokes. These are regression checks,
   not a general recall claim. Concurrency-defect detection has not been
   validated.

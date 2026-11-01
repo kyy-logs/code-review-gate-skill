@@ -43,6 +43,11 @@ class SkillLocaleTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('security.md', result.stdout + result.stderr)
 
+    def test_english_rule_index_has_no_legacy_chinese_marker(self):
+        text = (ROOT / 'skills/code-review/references/rules/index.md').read_text(encoding='utf-8')
+        self.assertNotIn('检测模式', text)
+        self.assertNotIn('规则ID', text)
+
     def test_rule_pattern_mismatch_fails(self):
         path = self.root / 'skills/code-review-zh/references/rules/baseline-java.md'
         text = path.read_text(encoding='utf-8').replace(

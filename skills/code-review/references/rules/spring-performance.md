@@ -14,14 +14,14 @@ public UserDTO createUser(@Valid @RequestBody UserCreateRequest request) {
 
 @Data
 public class UserCreateRequest {
-    @NotBlank(message = "用户名不能为空")
-    @Size(min = 2, max = 50, message = "用户名长度2-50")
+    @NotBlank(message = "username must not be blank")
+    @Size(min = 2, max = 50, message = "username length must be 2-50")
     private String name;
     
-    @Email(message = "邮箱格式不正确")
+    @Email(message = "invalid email format")
     private String email;
     
-    @Min(value = 0, message = "年龄不能为负")
+    @Min(value = 0, message = "age must not be negative")
     private Integer age;
 }
 ```
@@ -85,7 +85,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleOther(Exception e) {
         log.error("Unexpected error", e);
         return ResponseEntity.internalServerError()
-            .body(new ErrorResponse("SYSTEM_ERROR", "系统错误"));
+            .body(new ErrorResponse("SYSTEM_ERROR", "system error"));
     }
 }
 ```

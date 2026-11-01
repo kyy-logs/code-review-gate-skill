@@ -125,11 +125,11 @@ if (condition) {
 ```java
 switch (status) {
     case Status.ACTIVE:
-        return "激活";
+        return "active";
     case Status.INACTIVE:
-        return "未激活";
+        return "inactive";
     default:
-        return "未知";
+        return "unknown";
 }
 ```
 
