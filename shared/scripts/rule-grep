@@ -79,9 +79,16 @@ _extract() {
         # 标题 = [严重级] 之后的全部
         if (match($0, /\] /)) title = substr($0, RSTART + 2)
         inpat = 0
+        semantic = 0
         next
       }
-      /^\*\*检测模式\*\*/ {
+      /^\*\*(检测方式|Detection mode)\*\*/ {
+        semantic = 1
+        inpat = 0
+        next
+      }
+      /^\*\*(检测模式|Detection pattern)\*\*/ {
+        if (semantic) next
         inpat = 1
         # ⚠️ **这一行本身也可能带模式** —— 规则库有两种写法，而这里原先直接 `next`：
         #      块式：  **检测模式**（任一命中即违规）:

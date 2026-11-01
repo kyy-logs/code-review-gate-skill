@@ -18,6 +18,31 @@ import yaml
 SEVERITIES = ('high', 'medium', 'low')
 STATUSES = ('open', 'reconciled', 'wontfix', 'false-positive')
 NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*\Z')
+LABELS_PATH = Path(__file__).resolve().parents[1] / 'assets' / 'report-labels.json'
+LABEL_KEYS = frozenset({
+    'language', 'probe_table_header', 'probe_table_separator',
+    'required_yes', 'required_no',
+    'status_passed', 'status_failed', 'status_error', 'status_skipped',
+    'findings_heading', 'finding_id', 'finding_location', 'finding_status',
+    'finding_status_open', 'finding_status_reconciled', 'finding_status_wontfix',
+    'finding_status_false_positive', 'finding_evidence', 'finding_reconciled_by',
+    'no_findings', 'reconcile_line', 'gate_prefix', 'gate_blocked', 'gate_clear',
+    'gate_detail', 'gate_footer', 'summary_heading', 'summary_findings',
+    'summary_high_ids', 'summary_medium_ids', 'summary_low_ids',
+    'summary_reconcile', 'summary_required_failed', 'summary_status',
+    'summary_blocked', 'summary_clear', 'summary_none',
+})
+
+
+def load_labels():
+    data = json.loads(LABELS_PATH.read_text(encoding='utf-8-sig'))
+    require(isinstance(data, dict), 'report labels must be an object')
+    require(data.get('language') in ('en', 'zh-CN'), 'unsupported report language')
+    missing = LABEL_KEYS - data.keys()
+    require(not missing, 'report labels missing keys: ' + ', '.join(sorted(missing)))
+    for key in LABEL_KEYS:
+        require(isinstance(data[key], str) and data[key].strip(), 'empty report label: ' + key)
+    return data
 
 
 def require(condition, message):
@@ -141,36 +166,36 @@ def markdown(value):
     return value.replace('\r\n', '\n').replace('\r', '\n').replace('\n', '<br>')
 
 
-def render_sections(summary):
-    rows = ['| 探针 | required | 状态 | 耗时（秒） | high | medium | low | 说明 |',
-            '|---|---|---|---|---|---|---|---|']
+def render_sections(summary, labels):
+    rows = [labels['probe_table_header'], labels['probe_table_separator']]
     for p in summary['probes']:
-        status = {'passed': '通过', 'failed': '发现阻塞问题', 'error': '执行错误', 'skipped': '跳过'}[p['status']]
+        status = labels['status_' + p['status']]
         rows.append('| ' + ' | '.join(markdown(value) for value in
-                    (p['name'], '是' if p['required'] else '否', status, p['duration'],
-                     p['high'], p['medium'], p['low'], p['reason'])) + ' |')
-    rows += ['', '### 问题详情', '']
+                    (p['name'], labels['required_yes'] if p['required'] else labels['required_no'],
+                     status, p['duration'], p['high'], p['medium'], p['low'], p['reason'])) + ' |')
+    rows += ['', labels['findings_heading'], '']
     for item in summary['findings']:
+        status = labels['finding_status_' + item['status']]
         rows += [f"#### [{item['severity']}] {markdown(item['summary'])}", '',
-                 f"- 问题 ID：{markdown(item['id'])}",
-                 f"- 位置：{markdown(item['location'])}",
-                 f"- 状态：" + {'open': '待处理', 'reconciled': '已处置', 'wontfix': '明确不修', 'false-positive': '误报'}[item['status']] + f"（{item['status']}）",
-                 f"- 原始证据：{markdown(item['evidence'])}"]
+                 labels['finding_id'] + markdown(item['id']),
+                 labels['finding_location'] + markdown(item['location']),
+                 labels['finding_status'] + status + f" ({item['status']})",
+                 labels['finding_evidence'] + markdown(item['evidence'])]
         if item.get('reconciled_by'):
-            rows.append(f"- 处理说明：{markdown(item['reconciled_by'])}")
+            rows.append(labels['finding_reconciled_by'] + markdown(item['reconciled_by']))
         rows.append('')
     if not summary['findings']:
-        rows.append('本轮没有记录 finding。')
+        rows.append(labels['no_findings'])
     r = summary['reconcile']
-    rows += ['', f"reconciliation：total={r['total']} / done={r['done']} / pending={r['pending']}"]
+    rows += ['', labels['reconcile_line'].format(**r)]
     failed = [p['name'] for p in summary['probes'] if p['required'] and p['status'] in ('failed', 'error')]
-    gate = '问题与探针状态：' + ('**阻塞**' if r['pending'] or failed else '**无已记录阻塞项**')
-    gate += f"。待处理严重问题 {r['pending']} 条；required 探针失败或错误 {len(failed)} 个。"
-    gate += '\n\n此结果不代表验收、覆盖率、测试或 CI 等其他条件已全部满足。'
+    gate = labels['gate_prefix'] + (labels['gate_blocked'] if r['pending'] or failed else labels['gate_clear'])
+    gate += labels['gate_detail'].format(pending=r['pending'], failed=len(failed))
+    gate += '\n\n' + labels['gate_footer']
     return dict(probes='\n'.join(rows).strip(), gate=gate)
 
 
-def summary_text(summary):
+def summary_text(summary, labels):
     """Canonical delivery summary derived only from validated JSON records."""
     findings = summary['findings']
     by_severity = {
@@ -184,15 +209,15 @@ def summary_text(summary):
     reconcile = summary['reconcile']
     blocked = bool(reconcile['pending'] or required_failed)
     lines = [
-        '审查摘要（来自 JSON）',
-        'findings: high={high} medium={medium} low={low}'.format(
+        labels['summary_heading'],
+        labels['summary_findings'].format(
             **{severity: len(by_severity[severity]) for severity in SEVERITIES}),
-        'high_ids: ' + (', '.join(by_severity['high']) or '-'),
-        'medium_ids: ' + (', '.join(by_severity['medium']) or '-'),
-        'low_ids: ' + (', '.join(by_severity['low']) or '-'),
-        'reconcile: total={total} done={done} pending={pending}'.format(**reconcile),
-        'required_failed: ' + (', '.join(required_failed) or 'none'),
-        'status: ' + ('阻塞' if blocked else '无已记录阻塞项'),
+        labels['summary_high_ids'] + (', '.join(by_severity['high']) or '-'),
+        labels['summary_medium_ids'] + (', '.join(by_severity['medium']) or '-'),
+        labels['summary_low_ids'] + (', '.join(by_severity['low']) or '-'),
+        labels['summary_reconcile'].format(**reconcile),
+        labels['summary_required_failed'] + (', '.join(required_failed) or labels['summary_none']),
+        labels['summary_status'] + (labels['summary_blocked'] if blocked else labels['summary_clear']),
     ]
     return '\n'.join(lines)
 
@@ -258,10 +283,11 @@ def main():
     output.add_argument('--summary', action='store_true', help='Print the canonical delivery summary from validated JSON')
     args = parser.parse_args()
     try:
+        labels = load_labels()
         summary = summarize(args.review_dir, args.registry, args.probes)
         if args.render or args.write_report or args.check_report:
             require(not args.probes, '渲染和展示校验需要最终同步结果')
-            sections = render_sections(summary)
+            sections = render_sections(summary, labels)
             if args.write_report or args.check_report:
                 update_report(args.review_dir, sections, check=args.check_report)
         if args.summary:
@@ -278,7 +304,7 @@ def main():
     elif args.has_high:
         print(str(any(p['high'] for p in summary['probes'])).lower())
     elif args.summary:
-        print(summary_text(summary))
+        print(summary_text(summary, labels))
     else:
         print(json.dumps(summary, ensure_ascii=False))
     return 0
