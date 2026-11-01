@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="620" viewBox="0 0 1160 620" role="img" aria-labelledby="title desc">
+<title id="title">一次审查怎么跑</title>
+<desc id="desc">四个独立上下文探针并行执行并各自写入 JSON；主执行器同步、对账 high finding、渲染报告并执行门禁。</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#757575"/></marker></defs>
+<rect x="0" y="0" width="1160" height="620" rx="8" fill="#F9F9F7"/>
+<text x="580.0" y="38" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="18" font-weight="600" fill="#1E1E1E">一次审查怎么跑</text>
+<text x="134" y="78" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#757575">项目（只读）</text>
+<text x="594" y="78" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#757575">审查工作区</text>
+<text x="1040" y="78" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#757575">输出</text>
+<rect x="24" y="96" width="220" height="480" rx="8" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1.5"/>
+<rect x="264" y="96" width="660" height="480" rx="8" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1.5"/>
+<rect x="944" y="96" width="192" height="480" rx="8" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1.5"/>
+<rect x="46" y="150" width="176" height="104" rx="6" fill="#EDE8F4"/>
+<text x="134.0" y="190.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#1E1E1E">base..head</text>
+<text x="134.0" y="207.2" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">diff + 源码</text>
+<text x="134.0" y="222.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">测试 + 规则</text>
+<text x="134" y="286" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">静态、只读输入</text>
+<text x="300" y="124" text-anchor="start" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#757575">1. 确定范围 + 派发</text>
+<rect x="300" y="136" width="588" height="56" rx="6" fill="#E8E8E4"/>
+<text x="594.0" y="160.45" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#1E1E1E">主执行器</text>
+<text x="594.0" y="176.95" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">确定范围并派发四个探针</text>
+<text x="306" y="220" text-anchor="start" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#757575">2. 探针（并行）</text>
+<rect x="306" y="238" width="132" height="104" rx="6" fill="#EDE8F4"/>
+<text x="372" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">behavior-review</text>
+<text x="372" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">全新上下文</text>
+<text x="372" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">写自己的 JSON</text>
+<rect x="454" y="238" width="132" height="104" rx="6" fill="#FFF8E1"/>
+<text x="520" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">test-coverage</text>
+<text x="520" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">全新上下文</text>
+<text x="520" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">写自己的 JSON</text>
+<rect x="602" y="238" width="132" height="104" rx="6" fill="#D4E4D8"/>
+<text x="668" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">repo-guard</text>
+<text x="668" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">全新上下文</text>
+<text x="668" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">写自己的 JSON</text>
+<rect x="750" y="238" width="132" height="104" rx="6" fill="#E3EEF9"/>
+<text x="816" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">impact-analysis</text>
+<text x="816" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">全新上下文</text>
+<text x="816" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">写自己的 JSON</text>
+<text x="594" y="362" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">并行执行</text>
+<text x="360" y="378" text-anchor="start" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#757575">3. 同步 + 对账</text>
+<rect x="360" y="390" width="468" height="44" rx="6" fill="#FFF8E1"/>
+<text x="594.0" y="415.85" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">同步 + 校验 JSON</text>
+<rect x="360" y="446" width="468" height="44" rx="6" fill="#D4E4D8"/>
+<text x="594.0" y="471.85" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">对账 high finding</text>
+<rect x="360" y="502" width="468" height="44" rx="6" fill="#E3EEF9"/>
+<text x="594.0" y="527.85" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">渲染 + 校验报告</text>
+<rect x="962" y="150" width="156" height="64" rx="6" fill="#E8E8E4"/>
+<text x="1040.0" y="178.6" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">code-review.md</text>
+<text x="1040.0" y="194.1" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">人读报告</text>
+<rect x="962" y="228" width="156" height="64" rx="6" fill="#E8E8E4"/>
+<text x="1040.0" y="256.6" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">probes/*.json</text>
+<text x="1040.0" y="272.1" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">原始记录</text>
+<rect x="962" y="330" width="156" height="96" rx="6" fill="#FCE4D6"/>
+<text x="1040.0" y="367.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#1E1E1E">门禁</text>
+<text x="1040.0" y="383.2" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">通过 / 阻塞</text>
+<text x="1040.0" y="397.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">不等于人工批准</text>
+<path d="M222 202 L298 164" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L372 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L520 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L668 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L816 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M372 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M520 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M668 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M816 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 434 L594 444" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 490 L594 500" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M828 524 L960 378" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<text x="580" y="598" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10" font-weight="400" fill="#757575">四个探针使用同一模型、各自全新上下文；没有独立 reviewer 或 finding 验证阶段。</text>
+<text x="580" y="615" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10" font-weight="400" fill="#757575">门禁通过不等于人工批准、CI 通过，也不代表没有遗漏问题。</text>
+</svg>
