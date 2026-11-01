@@ -4,6 +4,10 @@ These tests exercise the review pipeline's records, three-level severity
 validation, report rendering, and gate behavior. They do not call a model and
 do not replace recall evaluation.
 
+Bilingual packaging tests cover shared-script synchronization, report-label
+localization, English/Chinese rule extraction, explicit semantic rules, locale
+structure checks, and both installable language layouts.
+
 Release-note tests run the NEWS Unreleased generator against temporary Git
 histories, including Conventional Commits, keyword fallback, skipped release
 subjects, stale blocks, and missing markers. They also exercise the

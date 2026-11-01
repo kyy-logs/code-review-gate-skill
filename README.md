@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill source lives in [`skills/code-review/`](skills/code-review/), independently of any host's installation directory. The current version is a beta release; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current version is a beta release; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -46,7 +46,7 @@ gate behavior may change before 1.0.
   records before using them with this release.
 - **Scope:** static-first review with four probes and JSON-derived report/gate
   output. It does not replace tests, CI, or human review.
-- **Validation:** 52 offline pipeline, NEWS, and installation tests; clean-project
+- **Validation:** 72 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
   end-to-end gate runs; additional probe smokes. These are regression checks,
   not a general recall claim. Concurrency-defect detection has not been
   validated.
@@ -90,10 +90,14 @@ The implementation context does not sign off on its own work. Four probes run in
 Run this command **inside your project**:
 
 ```bash
+# English (default)
 npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review --yes
+
+# Chinese
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-zh --yes
 ```
 
-Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/code-review/`; Claude Code installs to `.claude/skills/code-review/`. Node.js 22.20+ is required. This installs only the skill; there is no separate reviewer adapter.
+Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/<skill>/`; Claude Code installs to `.claude/skills/<skill>/`. Node.js 22.20+ is required. Install one language per project. The Python installers also accept `--lang en|zh-CN` and default to English.
 
 ### Run
 
@@ -263,28 +267,33 @@ code-review-skill/
 │   └── code-review-architecture.zh-CN.svg
 ├── .github/workflows/
 │   ├── news-update.yml
+│   ├── skill-validation.yml
 │   ├── star-history.yml
 │   └── sync-news.yml
 ├── scripts/
+│   ├── check-skill-locales.py
 │   ├── install
 │   ├── install.py
 │   ├── install-remote.py
 │   ├── news-update.py
+│   ├── sync-skill-scripts.py
 │   └── sync-news.py
+├── shared/scripts/
+│   ├── collect-metrics
+│   ├── lib-metrics
+│   ├── rule-grep
+│   └── sync-results.py
 ├── skills/
-│   └── code-review/
+│   ├── code-review/
+│   │   ├── SKILL.md
+│   │   ├── assets/
+│   │   ├── references/
+│   │   └── scripts/
+│   └── code-review-zh/
 │       ├── SKILL.md
-│       ├── assets/code-review.md
+│       ├── assets/
 │       ├── references/
-│       │   ├── probes.yaml
-│       │   ├── output-schema.md
-│       │   ├── probes/
-│       │   └── rules/
 │       └── scripts/
-│           ├── collect-metrics
-│           ├── lib-metrics
-│           ├── rule-grep
-│           └── sync-results.py
 └── tests/
 ```
 

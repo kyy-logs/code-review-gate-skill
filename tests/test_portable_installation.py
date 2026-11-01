@@ -14,6 +14,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / 'skills/code-review'
+ZH_SOURCE = ROOT / 'skills/code-review-zh'
 
 
 class PortableInstallationTests(unittest.TestCase):
@@ -28,9 +29,9 @@ class PortableInstallationTests(unittest.TestCase):
         self.environment.pop('CODE_REVIEW_SKILL_DIR', None)
         self.environment.pop('CODE_REVIEW_RULES_DIR', None)
 
-    def install(self, relative):
+    def install(self, relative, source=SOURCE):
         self.skill = self.project / relative
-        shutil.copytree(SOURCE, self.skill, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
+        shutil.copytree(source, self.skill, ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
         registry = yaml.safe_load((self.skill / 'references/probes.yaml').read_text(encoding='utf-8'))
         self.records = {p['name']: dict(probe=p['name'], status='passed', findings=[]) for p in registry['probes']}
         shutil.copyfile(self.skill / 'assets/code-review.md', self.review / 'code-review.md')
@@ -60,6 +61,19 @@ class PortableInstallationTests(unittest.TestCase):
                 self.assertEqual(len(summary['probes']), 4)
                 self.assertEqual(summary['reconcile'], dict(total=0, done=0, pending=0))
                 self.assertEqual({p: p.read_bytes() for p in before}, before)
+
+    def test_bilingual_packages_work_after_copying(self):
+        for source, name, heading in (
+            (SOURCE, 'code-review', 'Review summary (from JSON)'),
+            (ZH_SOURCE, 'code-review-zh', '审查摘要（来自 JSON）'),
+        ):
+            for location in ('.claude/skills/' + name, 'custom ' + name):
+                with self.subTest(source=name, location=location):
+                    self.install(location, source=source)
+                    self.assertEqual(self.run_python('--write-report').returncode, 0)
+                    summary = self.run_python('--summary')
+                    self.assertEqual(summary.returncode, 0, summary.stderr)
+                    self.assertIn(heading, summary.stdout)
 
     @unittest.skipUnless(os.environ.get('CODE_REVIEW_TEST_BASH'), 'Bash is required')
     def test_shell_pipeline_resolves_installed_files_and_project_rules(self):

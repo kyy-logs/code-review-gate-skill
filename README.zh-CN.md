@@ -4,7 +4,7 @@
 
 **基于证据的代码审查：优先静态分析，使用探针分工，并根据结果执行门禁。**
 
-技能源码位于 [`skills/code-review/`](skills/code-review/)，与宿主工具的安装目录分离。当前为 beta 测试版本，版本号见 [VERSION](VERSION)。
+技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前为 beta 测试版本，版本号见 [VERSION](VERSION)。
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -57,7 +57,7 @@
 
 - **三级评级**：`high`、`medium`、`low`。此前四级版本写入的记录，包括包含 `critical` 值的记录，**不兼容**当前版本；`collect-metrics` 会拒绝这些记录。使用前请重新审查，或显式迁移记录。
 - **适用范围**：以静态分析为主，使用四个探针，以及从 JSON 派生的报告和门禁。不能替代测试、CI 或人工审查。
-- **验证情况**：52 项审查流程、NEWS 与安装离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
+- **验证情况**：72 项审查流程、NEWS、安装、双语与结构离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
 
 ## 目录
 
@@ -98,10 +98,14 @@
 **在你的项目目录中**执行：
 
 ```bash
+# 英文（默认）
 npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review --yes
+
+# 中文
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-zh --yes
 ```
 
-Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/code-review/`，Claude Code 安装到 `.claude/skills/code-review/`。需要 Node.js 22.20+。只安装 skill，不再安装独立 reviewer。
+Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skill>/`，Claude Code 安装到 `.claude/skills/<skill>/`。需要 Node.js 22.20+。项目内只安装一种语言。Python 安装器也支持 `--lang en|zh-CN`，默认英文。
 
 ### 运行
 
@@ -266,28 +270,33 @@ code-review-skill/
 │   └── code-review-architecture.zh-CN.svg
 ├── .github/workflows/
 │   ├── news-update.yml
+│   ├── skill-validation.yml
 │   ├── star-history.yml
 │   └── sync-news.yml
 ├── scripts/
+│   ├── check-skill-locales.py
 │   ├── install
 │   ├── install.py
 │   ├── install-remote.py
 │   ├── news-update.py
+│   ├── sync-skill-scripts.py
 │   └── sync-news.py
+├── shared/scripts/
+│   ├── collect-metrics
+│   ├── lib-metrics
+│   ├── rule-grep
+│   └── sync-results.py
 ├── skills/
-│   └── code-review/
+│   ├── code-review/
+│   │   ├── SKILL.md
+│   │   ├── assets/
+│   │   ├── references/
+│   │   └── scripts/
+│   └── code-review-zh/
 │       ├── SKILL.md
-│       ├── assets/code-review.md
+│       ├── assets/
 │       ├── references/
-│       │   ├── probes.yaml
-│       │   ├── output-schema.md
-│       │   ├── probes/
-│       │   └── rules/
 │       └── scripts/
-│           ├── collect-metrics
-│           ├── lib-metrics
-│           ├── rule-grep
-│           └── sync-results.py
 └── tests/
 ```
 
