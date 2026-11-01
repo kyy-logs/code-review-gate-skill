@@ -35,5 +35,6 @@
   "summary_status": "status: ",
   "summary_blocked": "blocked",
   "summary_clear": "no recorded blockers",
-  "summary_none": "none"
+  "summary_none": "none",
+  "finding_status_suffix": " ({status})"
 }

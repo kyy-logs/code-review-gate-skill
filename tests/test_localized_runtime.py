@@ -59,9 +59,9 @@ class LocalizedRuntimeTests(unittest.TestCase):
     def test_english_and_chinese_labels_change_presentation_not_facts(self):
         en_skill, en_review = self.prepare(EN)
         zh_skill, zh_review = self.prepare(ZH)
-        for skill, review, heading, status in (
-            (en_skill, en_review, 'Review summary (from JSON)', 'status: blocked'),
-            (zh_skill, zh_review, '审查摘要（来自 JSON）', 'status: 阻塞'),
+        for skill, review, heading, status, status_line in (
+            (en_skill, en_review, 'Review summary (from JSON)', 'status: blocked', 'open (open)'),
+            (zh_skill, zh_review, '审查摘要（来自 JSON）', 'status: 阻塞', '待处理（open）'),
         ):
             rendered = self.run_pipeline(skill, review, '--write-report')
             self.assertEqual(rendered.returncode, 0, rendered.stderr)
@@ -70,6 +70,7 @@ class LocalizedRuntimeTests(unittest.TestCase):
             self.assertIn(status, self.run_pipeline(skill, review, '--summary').stdout)
             self.assertIn('保留原文 summary', report)
             self.assertIn('保留原文 evidence', report)
+            self.assertIn(status_line, report)
 
         en_summary = self.run_pipeline(en_skill, en_review, '--summary').stdout
         zh_summary = self.run_pipeline(zh_skill, zh_review, '--summary').stdout

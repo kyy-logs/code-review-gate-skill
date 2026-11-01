@@ -25,7 +25,7 @@ LABEL_KEYS = frozenset({
     'status_passed', 'status_failed', 'status_error', 'status_skipped',
     'findings_heading', 'finding_id', 'finding_location', 'finding_status',
     'finding_status_open', 'finding_status_reconciled', 'finding_status_wontfix',
-    'finding_status_false_positive', 'finding_evidence', 'finding_reconciled_by',
+    'finding_status_false_positive', 'finding_status_suffix', 'finding_evidence', 'finding_reconciled_by',
     'no_findings', 'reconcile_line', 'gate_prefix', 'gate_blocked', 'gate_clear',
     'gate_detail', 'gate_footer', 'summary_heading', 'summary_findings',
     'summary_high_ids', 'summary_medium_ids', 'summary_low_ids',
@@ -179,7 +179,7 @@ def render_sections(summary, labels):
         rows += [f"#### [{item['severity']}] {markdown(item['summary'])}", '',
                  labels['finding_id'] + markdown(item['id']),
                  labels['finding_location'] + markdown(item['location']),
-                 labels['finding_status'] + status + f" ({item['status']})",
+                 labels['finding_status'] + status + labels['finding_status_suffix'].format(status=item['status']),
                  labels['finding_evidence'] + markdown(item['evidence'])]
         if item.get('reconciled_by'):
             rows.append(labels['finding_reconciled_by'] + markdown(item['reconciled_by']))

@@ -35,5 +35,6 @@
   "summary_status": "status: ",
   "summary_blocked": "阻塞",
   "summary_clear": "无已记录阻塞项",
-  "summary_none": "none"
+  "summary_none": "none",
+  "finding_status_suffix": "（{status}）"
 }
