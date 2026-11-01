@@ -175,7 +175,7 @@ def render_sections(summary, labels):
                      status, p['duration'], p['high'], p['medium'], p['low'], p['reason'])) + ' |')
     rows += ['', labels['findings_heading'], '']
     for item in summary['findings']:
-        status = labels['finding_status_' + item['status']]
+        status = labels['finding_status_' + item['status'].replace('-', '_')]
         rows += [f"#### [{item['severity']}] {markdown(item['summary'])}", '',
                  labels['finding_id'] + markdown(item['id']),
                  labels['finding_location'] + markdown(item['location']),

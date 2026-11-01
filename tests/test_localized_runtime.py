@@ -77,6 +77,28 @@ class LocalizedRuntimeTests(unittest.TestCase):
         self.assertIn('findings: high=1 medium=0 low=0', en_summary)
         self.assertIn('findings: high=1 medium=0 low=0', zh_summary)
 
+    def test_false_positive_finding_renders(self):
+        skill, review = self.prepare(EN)
+        record = {
+            'probe': 'behavior-review',
+            'status': 'passed',
+            'findings': [{
+                'id': 'behavior-review-1',
+                'probe': 'behavior-review',
+                'severity': 'medium',
+                'status': 'false-positive',
+                'location': 'src/Parser.java:7',
+                'summary': 'Original summary',
+                'evidence': 'Original evidence',
+            }],
+        }
+        (review / 'probes/behavior-review.json').write_text(
+            json.dumps(record, ensure_ascii=False), encoding='utf-8')
+        result = self.run_pipeline(skill, review, '--write-report')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        report = (review / 'code-review.md').read_text(encoding='utf-8')
+        self.assertIn('false positive (false-positive)', report)
+
     def test_missing_label_is_an_error(self):
         skill, review = self.prepare(EN)
         labels_path = skill / 'assets/report-labels.json'
