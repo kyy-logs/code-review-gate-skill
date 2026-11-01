@@ -142,9 +142,11 @@ docs/work/active/{slug}/
 
 ## 工作流程
 
-```text
-确定范围 ──► 探针检查 ──► 同步 ──► 对账 ──► 报告 ──► 门禁
-```
+<p align="center">
+  <img src="assets/code-review-architecture.zh-CN.svg" width="1160" alt="四个独立上下文探针并行执行并各自写入 JSON；主执行器同步、对账 high finding、渲染报告并执行门禁。">
+</p>
+
+四个探针使用同一模型、各自在全新上下文中执行；这是职责隔离，不是独立人工审计。门禁通过不等于人工批准、CI 通过，也不代表没有遗漏问题。当前 skill 没有独立的 reviewer 或 finding 验证阶段；原始 finding 直接进入报告和门禁。
 
 1. **确定范围**：选择 `worktree` 或 `commits`，将 base 和 head 记录为 commit ID。
 2. **探针检查**：派发四个独立代理，使用同一份范围和 diff，各自写自己的探针 JSON。宿主槽位不足时分批执行；没有代理能力时记录串行回退。跨探针重复问题暂时保留并计数，实际提速和 token 节省尚未验证。
@@ -259,6 +261,9 @@ code-review-skill/
 ├── NEWS.md
 ├── LICENSE
 ├── VERSION
+├── assets/
+│   ├── code-review-architecture.svg
+│   └── code-review-architecture.zh-CN.svg
 ├── .github/workflows/
 │   ├── news-update.yml
 │   ├── star-history.yml

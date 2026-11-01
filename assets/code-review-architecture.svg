@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="620" viewBox="0 0 1160 620" role="img" aria-labelledby="title desc">
+<title id="title">How a code review runs</title>
+<desc id="desc">Four fresh-context probes run in parallel and write their own JSON. The main executor syncs, reconciles high findings, renders the report, and applies the gate.</desc>
+<defs><marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="#757575"/></marker></defs>
+<rect x="0" y="0" width="1160" height="620" rx="8" fill="#F9F9F7"/>
+<text x="580.0" y="38" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="18" font-weight="600" fill="#1E1E1E">How a code review runs</text>
+<text x="134" y="78" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#757575">Project (read-only)</text>
+<text x="594" y="78" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#757575">Review workspace</text>
+<text x="1040" y="78" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#757575">Outputs</text>
+<rect x="24" y="96" width="220" height="480" rx="8" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1.5"/>
+<rect x="264" y="96" width="660" height="480" rx="8" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1.5"/>
+<rect x="944" y="96" width="192" height="480" rx="8" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="1.5"/>
+<rect x="46" y="150" width="176" height="104" rx="6" fill="#EDE8F4"/>
+<text x="134.0" y="190.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#1E1E1E">base..head</text>
+<text x="134.0" y="207.2" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">diff + source</text>
+<text x="134.0" y="222.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">tests + rules</text>
+<text x="134" y="286" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">static, read-only input</text>
+<text x="300" y="124" text-anchor="start" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#757575">1. Scope + dispatch</text>
+<rect x="300" y="136" width="588" height="56" rx="6" fill="#E8E8E4"/>
+<text x="594.0" y="160.45" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#1E1E1E">Main executor</text>
+<text x="594.0" y="176.95" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">scope + dispatch four probes</text>
+<text x="306" y="220" text-anchor="start" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#757575">2. Probes (parallel)</text>
+<rect x="306" y="238" width="132" height="104" rx="6" fill="#EDE8F4"/>
+<text x="372" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">behavior-review</text>
+<text x="372" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">fresh context</text>
+<text x="372" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">writes own JSON</text>
+<rect x="454" y="238" width="132" height="104" rx="6" fill="#FFF8E1"/>
+<text x="520" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">test-coverage</text>
+<text x="520" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">fresh context</text>
+<text x="520" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">writes own JSON</text>
+<rect x="602" y="238" width="132" height="104" rx="6" fill="#D4E4D8"/>
+<text x="668" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">repo-guard</text>
+<text x="668" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">fresh context</text>
+<text x="668" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">writes own JSON</text>
+<rect x="750" y="238" width="132" height="104" rx="6" fill="#E3EEF9"/>
+<text x="816" y="266" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="600" fill="#1E1E1E">impact-analysis</text>
+<text x="816" y="288" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">fresh context</text>
+<text x="816" y="318" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">writes own JSON</text>
+<text x="594" y="362" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10.5" font-weight="400" fill="#757575">in parallel</text>
+<text x="360" y="378" text-anchor="start" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#757575">3. Sync + reconcile</text>
+<rect x="360" y="390" width="468" height="44" rx="6" fill="#FFF8E1"/>
+<text x="594.0" y="415.85" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">Sync + validate JSON</text>
+<rect x="360" y="446" width="468" height="44" rx="6" fill="#D4E4D8"/>
+<text x="594.0" y="471.85" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">Reconcile high findings</text>
+<rect x="360" y="502" width="468" height="44" rx="6" fill="#E3EEF9"/>
+<text x="594.0" y="527.85" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">Render + check report</text>
+<rect x="962" y="150" width="156" height="64" rx="6" fill="#E8E8E4"/>
+<text x="1040.0" y="178.6" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">code-review.md</text>
+<text x="1040.0" y="194.1" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">human report</text>
+<rect x="962" y="228" width="156" height="64" rx="6" fill="#E8E8E4"/>
+<text x="1040.0" y="256.6" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="11" font-weight="600" fill="#1E1E1E">probes/*.json</text>
+<text x="1040.0" y="272.1" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">raw records</text>
+<rect x="962" y="330" width="156" height="96" rx="6" fill="#FCE4D6"/>
+<text x="1040.0" y="367.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="12" font-weight="600" fill="#1E1E1E">Gate</text>
+<text x="1040.0" y="383.2" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">pass / blocked</text>
+<text x="1040.0" y="397.7" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="9.5" font-weight="400" fill="#757575">not human approval</text>
+<path d="M222 202 L298 164" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L372 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L520 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L668 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 192 L816 236" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M372 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M520 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M668 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M816 342 L594 388" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 434 L594 444" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M594 490 L594 500" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<path d="M828 524 L960 378" stroke="#757575" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+<text x="580" y="598" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10" font-weight="400" fill="#757575">Fresh contexts, same model. No separate reviewer or finding-verification stage.</text>
+<text x="580" y="615" text-anchor="middle" font-family="system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI','Microsoft YaHei','Noto Sans CJK SC',sans-serif" font-size="10" font-weight="400" fill="#757575">Gate pass is not human approval, CI, or proof that no issues remain.</text>
+</svg>

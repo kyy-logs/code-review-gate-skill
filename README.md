@@ -134,9 +134,11 @@ docs/work/active/{slug}/
 
 ## How it works
 
-```text
-scope ──► probes ──► sync ──► reconcile ──► report ──► gate
-```
+<p align="center">
+  <img src="assets/code-review-architecture.svg" width="1160" alt="Four fresh-context probes run in parallel and write their own JSON; the main executor syncs, reconciles high findings, renders the report, and applies the gate.">
+</p>
+
+The four probes use the same model in fresh contexts. This is separation of duties, not independent human review. A passing gate is not human approval, CI, or proof that no issues remain. The current skill has no separate reviewer or finding-verification stage; raw findings feed the report and gate.
 
 1. **Scope** — determine `worktree` or `commits`; record base and head as commit IDs.
 2. **Probes** — dispatch four independent agents with the same scope and diff, each writing its own probe JSON. Run in batches if host capacity is limited, or record a serial fallback if agents are unavailable. Cross-probe duplicates are retained and counted; actual speed and token savings remain unverified.
@@ -256,6 +258,9 @@ code-review-skill/
 ├── NEWS.md
 ├── LICENSE
 ├── VERSION
+├── assets/
+│   ├── code-review-architecture.svg
+│   └── code-review-architecture.zh-CN.svg
 ├── .github/workflows/
 │   ├── news-update.yml
 │   ├── star-history.yml
