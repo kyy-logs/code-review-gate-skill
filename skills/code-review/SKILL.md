@@ -12,7 +12,7 @@ description: Use when code has been written, before committing, or when merging 
 - `references/`, `scripts/`, and `assets/` are relative to the directory containing the `SKILL.md` read for this run.
 - Run shell commands from the **reviewed project root**; `docs/work/`, code paths, and project rules all belong to the reviewed project.
 - `CODE_REVIEW_SKILL_DIR` below is the absolute path of the skill installation directory. Set it on every shell invocation, or replace it directly with the actual absolute path; do not assume variables persist across different shell invocations.
-- Scripts require basic commands such as Bash, Git, awk, grep, and sed. Invoke them via `bash`; no executable bit is needed.
+- Scripts require basic commands such as Bash 3.2+, Git, awk, grep, and sed. Invoke them via `bash`; no executable bit is needed.
 - Report parsing requires Python 3.9+ and PyYAML; `python` is invoked by default, and `CODE_REVIEW_PYTHON` can specify the interpreter's absolute path.
   For installation, see the release repository README; the in-repo entry point is `scripts/install.py`.
 
@@ -32,7 +32,7 @@ description: Use when code has been written, before committing, or when merging 
 | Rule pack | No | Defaults to the skill's built-in `references/rules/`; can be overridden with `CODE_REVIEW_RULES_DIR` |
 | Review identifier | No | `{slug}`, defaults to `<date>-<topic>` |
 
-The artifact root is `docs/work`, and this run's artifacts are written to `docs/work/active/{slug}/`.
+The artifact root `{output_root}` defaults to `docs/work`; override it with project `.code-review/config.json` `output_dir` or `CODE_REVIEW_OUTPUT_DIR`. This run's artifacts are written to `{output_root}/active/{slug}/`.
 
 ## Review Process
 
@@ -64,8 +64,16 @@ The artifact root is `docs/work`, and this run's artifacts are written to `docs/
    **Record and hand off**: save the mode, base, target (working tree or head), changed-file list, and diff,
    for use by all probes. Use NUL separators when processing the file list programmatically, and pass each path as a quoted argument.
 
-   After collection completes, create the report directory `docs/work/active/{slug}/probes/`
-   so that newly generated reports are not included among the files to review.
+   After collecting scope, initialize a new run before dispatching:
+   ```bash
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug}
+   ```
+   The returned JSON gives `review_dir`, `output_dir`, `line_target`, and `branch_target`.
+   Existing active directories, archived runs, or event history with the same slug are rejected.
+   Use a unique slug for a new review; explicitly continuing the same run reuses its directory without init.
+   Never dispatch two runs writing the same directory. Pass the actual directory and effective targets to all probes,
+   overriding the registry's coverage defaults. Init creates the report template.
+   Source inspection is read-only; the workflow writes reports, probe JSON, policy.json, events, and archive metrics.
 
 2. **Read the registry and determine the probe list**: Read `references/probes.yaml` and decide by `requires`:
    - Specified but missing / unreadable → `error`
@@ -83,7 +91,7 @@ The artifact root is `docs/work`, and this run's artifacts are written to `docs/
    Reuse context already read and only read more as needed; merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
    Local search is limited to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates; when something is missing or unreadable, record the specific evidence gap,
    without expanding to the disk root or the user directory, and without repeating searches when there is no new lead.
-   Write only `docs/work/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics.
+   Write only `{output_root}/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics.
    Before returning, wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited, then report completion.
 
    **Handoff**: every probe must have a JSON; state the reason when errored or skipped; on execution errors, keep the issues already found and let other probes continue.
@@ -144,7 +152,7 @@ The artifact root is `docs/work`, and this run's artifacts are written to `docs/
 | A required probe is `failed` / `error` (`PROBE_REQUIRED_FAILED > 0`) | Handle the issues found or the execution error, then re-run the corresponding probe |
 | A high finding has not completed reconciliation (`RECONCILE_PENDING > 0`) | Handle per step 4, and re-dispatch the affected probes after fixing |
 | Reconciliation was never reported (`RECONCILE_REPORTED=0`) | Complete step 4; run the final synchronization even when there are no high findings |
-| Coverage data was provided and is below baseline (default incremental line coverage < 85%) | List the coverage gaps, add tests, and re-review |
+| Coverage data was provided and is below baseline (below project line_target; default 85%) | List the coverage gaps, add tests, and re-review |
 | Acceptance criteria were provided and not all pass, or the criteria themselves are ambiguous | List the failing items; clarify ambiguity first, and do not self-check them as passing |
 | A high finding remains in `wontfix` | Complete handling per the output contract; "won't fix" cannot offset a pending item |
 
@@ -154,8 +162,8 @@ Script validation verifies consistency between report records and counts; it can
 
 ## Output Contract
 
-- **Main report**: `docs/work/active/{slug}/code-review.md`, generated per the sections and filling requirements in `assets/code-review.md`.
-- **Machine records**: `docs/work/active/{slug}/probes/<probe-name>.json`,
+- **Main report**: `{output_root}/active/{slug}/code-review.md`, generated per the sections and filling requirements in `assets/code-review.md`.
+- **Machine records**: `{output_root}/active/{slug}/probes/<probe-name>.json`,
   format per `references/output-schema.md`; the human report's facts section is derived from them.
 
 Historical records must be explicitly migrated to standalone JSON; do not infer from free text or auto-fill zeros, and do not read old embedded blocks at the same time.
@@ -169,4 +177,4 @@ The following items are done conditionally, not as mandatory steps each round:
   - Pitfalls hit during implementation → `lessons/pitfalls.md`
   - Cases where AI output was corrected → `lessons/bad-cases.md`
   - New architectural decisions → `lessons/arch-decisions.md`
-- **Archive**: when archiving is needed, move `docs/work/active/{slug}/` to `docs/work/archive/{YYYY}/`.
+- **Archive**: when archiving is needed, move `{output_root}/active/{slug}/` to `{output_root}/archive/{YYYY}/`.

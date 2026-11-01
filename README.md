@@ -249,7 +249,7 @@ The evaluation harness and raw reports are kept out of the published repository.
 ## Requirements
 
 - Claude Code with Agent Skills support, or Codex with custom-agent support.
-- Bash, Git, awk, grep, sed.
+- Bash 3.2+, Git, awk, grep, sed (macOS: invoke with `/bin/bash`; Linux/Windows Git Bash: `bash`).
 - Python 3.9+ is required to run the review scripts; PyYAML is used for report parsing and metrics.
 - Node.js 22.20+ is required for the `npx skills` install entry.
 
@@ -316,3 +316,28 @@ For user-facing changes, add an entry to `NEWS.md`. Pushes to `main` update the 
 ## License
 
 This repository is distributed under the [MIT License](LICENSE).
+
+
+## Project policy and output
+
+Optional `.code-review/config.json` (paths relative to the reviewed project):
+
+```json
+{
+  "output_dir": "docs/work",
+  "line_target": 85,
+  "branch_target": 80
+}
+```
+
+85% / 80% are configurable defaults. Line coverage blocks below target; branch coverage is advisory.
+Probes, gates, and reports use the same effective targets. `CODE_REVIEW_OUTPUT_DIR` overrides the output root;
+pass identical settings to every shell invocation. Source inspection is read-only, but the workflow writes
+`active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, root-level `workflow-events.log`,
+and scorecards / `quality-trend.csv` on archive.
+Start a new review with `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`.
+Existing active, archived, or event-history slugs are rejected. Re-rendering the same run updates only automatic report regions;
+do not run concurrent writers for the same run. policy.json records the initialization snapshot; keep configuration stable when
+resuming, and re-check findings and re-render after policy changes.
+The minimum shell is Bash 3.2. macOS can use `/bin/bash`; Linux / Windows Git Bash use `bash`.
+A macOS CI job is configured; a passing macOS result has not been established locally.

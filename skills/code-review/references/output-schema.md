@@ -47,7 +47,7 @@ Checked scope, limitations, and fix suggestions go in the human report; the mach
 
 | Level | Criterion | Enters reconciliation |
 |---|---|---|
-| `high` | Serious security rule violation / money or data correctness issue / HIGH-severity standards rule violation / contract break / measured diff line coverage below 85% / acceptance item failing | **Yes** |
+| `high` | Serious security rule violation / money or data correctness issue / HIGH-severity standards rule violation / contract break / measured diff line coverage below the effective project target (default 85%) / acceptance item failing | **Yes** |
 | `medium` | Maintainability issues, missing tests | No (record only) |
 | `low` | Style, naming | No |
 

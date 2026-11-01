@@ -7,6 +7,7 @@ does not claim natural-language semantic equivalence.
 """
 
 import argparse
+from collections import Counter
 import json
 import re
 import sys
@@ -21,7 +22,10 @@ PACKAGES = (
 )
 PROBE_FIELDS = ('name', 'file', 'required', 'requires', 'params')
 RULE_HEADING = re.compile(r'^### ([A-Za-z][A-Za-z0-9._-]*) \[(HIGH|MEDIUM|LOW)\]', re.M)
-MARKER = re.compile(r'<!-- code-review:([A-Za-z0-9_-]+):start -->')
+RULE_ID = re.compile(r'\b[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{3}\b')
+MARKER = re.compile(r'<!-- code-review:([A-Za-z0-9_-]+):(start|end) -->')
+REPORT_MARKERS = [('probes', 'start'), ('probes', 'end'),
+                  ('gate', 'start'), ('gate', 'end')]
 PATTERN = re.compile(r'`([^`]+)`')
 
 
@@ -78,7 +82,8 @@ def rule_contract(path):
             if in_patterns:
                 patterns.extend(PATTERN.findall(line))
         result.append((match.group(1), match.group(2), tuple(patterns)))
-    return result
+    # Prose and table rules also carry IDs, sometimes more than once per file.
+    return result, Counter(RULE_ID.findall(text))
 
 
 def rule_files(root, relative):
@@ -87,11 +92,23 @@ def rule_files(root, relative):
 
 
 def markers(path):
-    return MARKER.findall(path.read_text(encoding='utf-8-sig'))
+    result = MARKER.findall(path.read_text(encoding='utf-8-sig'))
+    if result != REPORT_MARKERS:
+        raise ValueError('missing, duplicate, or misordered report markers: ' + str(path))
+    return result
+
+
+def unique_labels(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError('duplicate report label: ' + key)
+        result[key] = value
+    return result
 
 
 def labels(path):
-    data = json.loads(path.read_text(encoding='utf-8-sig'))
+    data = json.loads(path.read_text(encoding='utf-8-sig'), object_pairs_hook=unique_labels)
     if not isinstance(data, dict):
         raise ValueError('invalid report labels: ' + str(path))
     return data.get('language'), frozenset(data.keys())
@@ -143,7 +160,7 @@ def check(root):
         zh_markers = markers(root / PACKAGES[1][1] / 'assets/code-review.md')
         if en_markers != zh_markers:
             errors.append('report marker order differs')
-    except OSError as error:
+    except (OSError, ValueError) as error:
         errors.append('report markers: ' + str(error))
 
     try:

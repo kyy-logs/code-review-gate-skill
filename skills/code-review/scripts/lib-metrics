@@ -21,7 +21,7 @@ _wf_find_root() {
   # **Windows 把前导 // 当 UNC 网络路径** → stat 走网络解析，实测**单次 2.4 秒**。
   # 每层另用 "${d%/}" 去尾斜杠，避免 /c 这类路径也拼出双斜杠。
   while [ -n "$d" ] && [ "$d" != "/" ]; do
-    [ -d "${d%/}/docs/work" ] && { printf '%s\n' "$d"; return 0; }
+    { [ -d "${d%/}/docs/work" ] || [ -f "${d%/}/.code-review/config.json" ]; } && { printf '%s\n' "$d"; return 0; }
     parent="$(dirname "$d")"
     [ "$parent" = "$d" ] && break     # 已到根（/ 或 C:/）
     d="$parent"
@@ -35,15 +35,25 @@ _wf_find_root() {
 WF_ROOT="$(_wf_find_root || true)"
 [ -n "$WF_ROOT" ] || die "未安装 code-review skill（从 $PWD 向上找不到 docs/work）"
 
-WF_WORK="$WF_ROOT/docs/work"
+_policy="$("${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
+  --registry "${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}/references/probes.yaml" \
+  --project-root "$WF_ROOT" --runtime-config)" || die "invalid project policy"
+IFS=$'\t' read -r WF_WORK COVERAGE_TARGET COVERAGE_BRANCH_TARGET <<< "$_policy"
 WF_EVENTS="$WF_WORK/workflow-events.log"
 WF_TREND="$WF_WORK/quality-trend.csv"
 
-COVERAGE_TARGET=85
 
 # 分支覆盖率目标。默认取 80%：它是底线规则，比模板里的执行值引用得更广。
 # 注意它**不参与扣分/降档**，只出一个判定位（见 CM_COVERAGE_BRANCH_PASS）。
-COVERAGE_BRANCH_TARGET=80
+
+event_time() {
+  if [ "${BASH_VERSINFO[0]}" -gt 4 ] || { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 2 ]; }; then
+    printf -v EVENT_TS '%(%s)T' -1
+  else
+    EVENT_TS="$(date +%s)"
+  fi
+  EVENT_ISO="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
 
 # 事件日志的列序（改动必须同步改全部 awk 的字段号与 §7.1 的 spec）
 #   1=epoch  2=iso  3=slug  4=profile  5=node  6=event  7=key  8=value
@@ -75,10 +85,14 @@ find_slug_dir() {
     printf '%s\n' "$WF_WORK/active/$slug"
     return 0
   fi
-  hit="$(find "$WF_WORK/archive" -mindepth 2 -maxdepth 2 -type d -name "$slug" 2>/dev/null || true)"
-  [ -n "$hit" ] || return 1
-  # 用 sed 而非 head：awk/grep 上游收到 SIGPIPE 会退 141，配合 pipefail 会杀掉脚本。
-  printf '%s\n' "$(printf '%s\n' "$hit" | sed -n 1p)"
+  local found=""
+  for hit in "$WF_WORK"/archive/*/"$slug"; do
+    [ -d "$hit" ] || continue
+    [ -z "$found" ] || die "ambiguous archived slug: $slug"
+    found="$hit"
+  done
+  [ -n "$found" ] || return 1
+  printf '%s\n' "$found"
 }
 
 scorecard_of() { printf '%s\n' "$1/quality-scorecard.txt"; }
@@ -120,12 +134,8 @@ append_event() {   # <slug> <profile> <node> <event> <key> <value>
   local ts iso
   validate_slug "$slug"   # 纵深防御：本函数不拼路径，但它是所有写入的必经点
 
-  # epoch 用 bash 内建拿，不起 date 进程。本函数一次埋点调一次、一个需求要调
-  # 十几次、测试里要调上百次 —— 在这台机器上每次 date 是 ~100ms。
-  # 之所以可以放心用 bash 内建：脚本本来就依赖 `date -Iseconds`（GNU 扩展），
-  # macOS 的 BSD date 不支持，所以并没有牺牲可移植性。
-  printf -v ts '%(%s)T' -1
-  iso="$(date -Iseconds)"
+  event_time
+  ts="$EVENT_TS"; iso="$EVENT_ISO"
 
   # 消毒：值里的制表符/换行会撕裂 TSV 行，让后续所有解析错位。
   # 同样改用内建，不起 tr。
@@ -592,7 +602,7 @@ collect_metrics() {   # <slug>
   CM_QUALITY_SCORE="$(printf '%s\n' "$scored" | sed -n 1p)"
   CM_QUALITY_GRADE="$(printf '%s\n' "$scored" | sed -n 2p)"
 
-  CM_GENERATED_AT="$(date -Iseconds)"
+  CM_GENERATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 }
 
 # 渲染 scorecard。头注释如实写明本版的采集局限，

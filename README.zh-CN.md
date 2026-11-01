@@ -118,13 +118,13 @@ Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skil
 也可以直接调用：
 
 ```text
-/code-review
+/code-review-zh
 ```
 
 审查固定提交区间：
 
 ```text
-使用 code-review 审查提交 abc123..def456
+使用 code-review-zh 审查提交 abc123..def456
 ```
 
 支持两种模式：
@@ -319,3 +319,26 @@ code-review-skill/
 ## 许可证
 
 本仓库使用 [MIT 许可证](LICENSE)。
+
+
+## 项目策略与输出
+
+可选项目配置 `.code-review/config.json`，相对路径按被审项目根目录解析：
+
+```json
+{
+  "output_dir": "docs/work",
+  "line_target": 85,
+  "branch_target": 80
+}
+```
+
+85% / 80% 是可配置默认值；行覆盖率参与阻塞，分支仅提示。探针、门禁和报告使用相同有效阈值。
+`CODE_REVIEW_OUTPUT_DIR` 可覆盖产物根目录；独立 shell 调用须传入同样配置。
+源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、`policy.json`、
+根目录的 `workflow-events.log`，以及 archive 命令生成的 scorecard 和 `quality-trend.csv`。
+新审查先执行 `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`；
+同名活动目录、归档或历史事件存在时拒绝创建。同轮重渲染仅更新报告自动区域；不应并发写同一轮。
+记录的 policy.json 是初始化快照；继续同轮时保持配置不变，改变阈值后须重新检查并渲染报告。
+最低 shell 为 Bash 3.2；macOS 可用 `/bin/bash`，Linux / Windows Git Bash 用 `bash`。
+macOS CI 已配置，尚未在本机验证 macOS；CI 通过后才可声称该平台验证通过。

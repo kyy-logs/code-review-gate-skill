@@ -13,7 +13,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 - shell 命令从**被审项目根目录**执行；`docs/work/`、代码路径与项目规则均属于被审项目。
 - 下文的 `CODE_REVIEW_SKILL_DIR` 指 skill 安装目录的绝对路径。每次 shell 调用都设置它，
   或直接用实际绝对路径替换；不要假定不同 shell 调用会保留变量。
-- 脚本需要 Bash、Git、awk、grep、sed 等基础命令。通过 `bash` 调用，无需依赖可执行位。
+- 脚本需要 Bash 3.2+、Git、awk、grep、sed 等基础命令。通过 `bash` 调用，无需依赖可执行位。
 - 报告解析需要 Python 3.9+ 和 PyYAML；默认调用 `python`，可用 `CODE_REVIEW_PYTHON` 指定解释器绝对路径。
   安装方式见发布仓库 README；仓库内入口为 `scripts/install.py`。
 
@@ -33,7 +33,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 | 规则包 | 否 | 默认 skill 内置 `references/rules/`；可用 `CODE_REVIEW_RULES_DIR` 覆盖 |
 | 审查标识 | 否 | `{slug}`，默认 `<日期>-<主题>` |
 
-产物根目录为 `docs/work`，本次产物写入 `docs/work/active/{slug}/`。
+产物根目录 `{output_root}` 默认 `docs/work`，可由项目 `.code-review/config.json` 的 `output_dir` 或 `CODE_REVIEW_OUTPUT_DIR` 覆盖。本次产物写入 `{output_root}/active/{slug}/`。
 
 ## 审查流程
 
@@ -65,8 +65,15 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
    **记录并交接**：保存模式、base、目标（工作区或 head）、变更文件清单及差异，
    供所有探针使用。程序处理文件清单时使用 NUL 分隔，并逐路径引用传参。
 
-   收集完成后，再创建报告目录 `docs/work/active/{slug}/probes/`，
-   避免将新生成的报告纳入待审查文件。
+   收集完成后执行以下命令初始化本轮目录和报告，避免将产物纳入被审范围：
+   ```bash
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug}
+   ```
+   返回 JSON 给出实际 `review_dir`、`output_dir`、`line_target` 和 `branch_target`。
+   同名活动目录、归档或历史事件存在时拒绝初始化；新审查换用唯一 slug，不覆盖旧产物。
+   明确继续同一轮时复用原目录，不再次 init；不得同时派发两轮写入同一目录。
+   将实际目录及有效阈值交给所有探针，覆盖注册表中的默认覆盖率参数。报告模板由 init 创建。
+   源码检查只读；本流程会写报告、探针 JSON、policy.json、事件日志和归档指标。
 
 2. **读注册表，确定探针清单**：Read `references/probes.yaml`，按 `requires` 判断：
    - 指定了但缺失 / 不可读 → `error`
@@ -84,7 +91,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
    复用已读上下文，仅按需补读；独立只读查询尽量合并，有依赖的查询逐步执行，首次读取源码时保留准确行号和必要上下文。
    本地搜索限于被审仓库、明确提供的关联目录及依赖坐标对应的缓存路径；缺失或不可读时记录具体证据缺口，
    不扩大到磁盘根目录或用户目录，也不在没有新线索时反复搜索。
-   只写 `docs/work/active/{slug}/probes/<探针名>.json`，不写共享报告或指标。
+   只写 `{output_root}/active/{slug}/probes/<探针名>.json`，不写共享报告或指标。
    返回前须等待自己启动的后台任务结束，或停止已不再需要的任务并确认退出，再通知完成。
 
    **交接**：每个探针均须有 JSON，错误或跳过时写明原因；执行错误时保留已发现问题，其他探针继续。
@@ -145,7 +152,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 | required 探针为 `failed` / `error`（`PROBE_REQUIRED_FAILED > 0`） | 处理已发现的问题或执行错误后，重跑对应探针 |
 | high finding 未完成 reconciliation（`RECONCILE_PENDING > 0`） | 按步骤 4 处理，修复后重派受影响的探针 |
 | reconcile 从未上报（`RECONCILE_REPORTED=0`） | 完成步骤 4；没有 high 也须执行最终同步 |
-| 提供了覆盖率数据且低于基线（默认增量行覆盖率 < 85%） | 列明覆盖缺口，补测试后重新审查 |
+| 提供了覆盖率数据且低于基线（增量行覆盖率低于项目 line_target，默认 85%） | 列明覆盖缺口，补测试后重新审查 |
 | 提供了验收标准且未全过，或标准本身有歧义 | 列明未通过项；有歧义先澄清，不得自行勾验通过 |
 | 有 high finding 停在 `wontfix` | 按输出契约完成处置，不能用“不修”冲抵待办 |
 
@@ -155,9 +162,9 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 
 ## 输出契约
 
-- **主报告**：`docs/work/active/{slug}/code-review.md`，按
+- **主报告**：`{output_root}/active/{slug}/code-review.md`，按
   `assets/code-review.md` 的章节和填写要求生成。
-- **机器记录**：`docs/work/active/{slug}/probes/<探针名>.json`，
+- **机器记录**：`{output_root}/active/{slug}/probes/<探针名>.json`，
   格式见 `references/output-schema.md`；人类报告的事实区域由它们派生。
 
 历史记录须明确迁移为独立 JSON；不从自由文本猜测或自动补零，也不同时读取旧内嵌区块。
@@ -171,4 +178,4 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
   - 实现过程中踩的坑 → `lessons/pitfalls.md`
   - AI 产出被纠正的案例 → `lessons/bad-cases.md`
   - 新的架构决策 → `lessons/arch-decisions.md`
-- **归档**：如需归档，将 `docs/work/active/{slug}/` 移到 `docs/work/archive/{YYYY}/`。
+- **归档**：如需归档，将 `{output_root}/active/{slug}/` 移到 `{output_root}/archive/{YYYY}/`。

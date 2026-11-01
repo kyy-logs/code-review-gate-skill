@@ -12,6 +12,12 @@ and evaluation artifacts out of this file.
 
 - English and Chinese skill packages, with shared runtime scripts and an installer `--lang en|zh-CN` option. English is the default; install one language per project.
 
+### Fixed
+
+- Added Bash 3.2 timestamp fallback and portable UTC dates; configurable project output/coverage policy, exclusive review initialization, and a macOS system-Bash CI job.
+
+- Corrected Chinese skill invocation examples; bilingual validation now checks prose/table rule IDs and complete report marker pairs, and rejects duplicate report-label keys.
+
 <!-- UNRELEASED:END -->
 
 ## v0.1.0-beta.3 (2026-10-31)

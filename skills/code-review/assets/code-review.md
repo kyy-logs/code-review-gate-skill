@@ -9,8 +9,8 @@ Static test quality: checked scope ____; conclusion and findings ____.
 
 | Metric | Target | Status | Actual | Conclusion |
 |---|---|---|---|---|
-| Line coverage (incremental) | 85% | Measured / Not measured / Not applicable | ____ | ____ |
-| Branch coverage | 80% | Measured / Not measured / Not applicable | ____ | ____ |
+| Line coverage (incremental) | {line_target}% | Measured / Not measured / Not applicable | ____ | ____ |
+| Branch coverage | {branch_target}% | Measured / Not measured / Not applicable | ____ | ____ |
 | Skipped or weakened related tests | Verify reasons and substitute verification | Checked / Unverified | ____ | ____ |
 
 Reasons for not measured / not applicable / unverified: ____.

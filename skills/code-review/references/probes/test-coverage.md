@@ -29,6 +29,9 @@ When expected behavior is still under contract dispute, record an unverified ite
 
 ## 3. Optional coverage check and reporting
 
+Use effective `line_target` / `branch_target` handed off by init; project policy takes precedence, defaults are 85 / 80.
+Compare against these effective targets, not a separate fixed 85% baseline.
+
 1. Prefer reusing an existing coverage report that corresponds to the review's target version and modules.
 2. When no corresponding report exists, run measurement only if the project already has a measurement method and this round's task allows it; otherwise record "not measured" and still complete the test quality check.
 3. With a valid report, compute the executable-line coverage of production source lines added or modified by this diff:
@@ -37,9 +40,9 @@ When expected behavior is still under contract dispute, record an unverified ite
 
 | Coverage situation | Record and handling |
 |---|---|
-| Measured diff line coverage ≥ 85% | Meets target |
-| Measured diff line coverage < 85% | high finding, blocks merge |
-| Branch coverage | Target 80%; falling short is advisory only and does not block or lower scores |
+| Measured diff line coverage ≥ line_target | Meets target |
+| Measured diff line coverage < line_target | high finding, blocks merge |
+| Branch coverage | Target branch_target (default 80%); falling short is advisory only and does not block or lower scores |
 | Confirmed no executable incremental lines | Record coverage as "not applicable", explain why, and do not fill in 0% or 100% |
 | A specified report is unreadable, unparsable, incomplete, or version-mismatched, or the measurement command fails | `error`; must not be recorded as "not measured" or "not applicable" |
 

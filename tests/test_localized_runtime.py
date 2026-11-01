@@ -108,6 +108,25 @@ class LocalizedRuntimeTests(unittest.TestCase):
         result = self.run_pipeline(skill, review, '--summary')
         self.assertNotEqual(result.returncode, 0)
 
+    def test_duplicate_label_key_is_rejected_without_changing_report(self):
+        for package in (EN, ZH):
+            with self.subTest(package=package.name):
+                skill, review = self.prepare(package)
+                report = review / 'code-review.md'
+                before = report.read_bytes()
+                labels_path = skill / 'assets/report-labels.json'
+                original = labels_path.read_text(encoding='utf-8')
+                labels_path.write_text(
+                    original.replace('{', '{"summary_heading": "conflicting heading",', 1),
+                    encoding='utf-8')
+                for action in ('--write-report', '--check-report', '--summary', '--events'):
+                    with self.subTest(action=action):
+                        result = self.run_pipeline(skill, review, action)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertEqual(result.stdout, '')
+                        self.assertIn('summary_heading', result.stderr)
+                        self.assertEqual(report.read_bytes(), before)
+
 
 @unittest.skipUnless(os.environ.get('CODE_REVIEW_TEST_BASH'), 'Bash is required')
 class RuleGrepLocalizationTests(unittest.TestCase):
