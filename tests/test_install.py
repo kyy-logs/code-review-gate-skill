@@ -30,6 +30,37 @@ class InstallerTests(unittest.TestCase):
             cwd=ROOT, env=self.environment, capture_output=True, text=True,
             encoding="utf-8", timeout=30)
 
+    def test_zh_language_installs_code_review_zh(self):
+        result = self.install("--agent", "codex", "--lang", "zh-CN")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.project / ".agents/skills/code-review-zh/SKILL.md").is_file())
+        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+
+    def test_both_hosts_honor_language(self):
+        result = self.install("--agent", "both", "--lang", "zh-CN")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.project / ".claude/skills/code-review-zh/SKILL.md").is_file())
+        self.assertTrue((self.project / ".agents/skills/code-review-zh/SKILL.md").is_file())
+        self.assertFalse((self.project / ".claude/skills/code-review").exists())
+        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+
+    def test_other_language_blocks_install_even_with_force(self):
+        other = self.project / ".agents/skills/code-review-zh"
+        other.mkdir(parents=True)
+        (other / "custom.txt").write_text("keep me\n", encoding="utf-8")
+        for extra in ((), ("--force",)):
+            with self.subTest(extra=extra):
+                result = self.install("--agent", "codex", *extra)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn("another language", result.stderr)
+                self.assertEqual((other / "custom.txt").read_text(encoding="utf-8"), "keep me\n")
+        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+
+    def test_invalid_language_writes_nothing(self):
+        result = self.install("--agent", "codex", "--lang", "zh")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.project / ".agents").exists())
+
     def test_claude_installation_installs_skill_only(self):
         result = self.install("--agent", "claude-code")
         self.assertEqual(result.returncode, 0, result.stderr)

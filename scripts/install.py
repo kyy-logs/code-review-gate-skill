@@ -20,16 +20,25 @@ import uuid
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-SOURCE_SKILL = REPO / "skills" / "code-review"
-TARGETS = {
-    "claude-code": (
-        ("skill", SOURCE_SKILL, ".claude/skills/code-review", True),
-    ),
-    "codex": (
-        ("skill", SOURCE_SKILL, ".agents/skills/code-review", True),
-    ),
+SOURCE_SKILLS = {
+    "en": REPO / "skills" / "code-review",
+    "zh-CN": REPO / "skills" / "code-review-zh",
 }
+TARGET_NAMES = {"en": "code-review", "zh-CN": "code-review-zh"}
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
+
+
+def _targets(lang: str) -> dict:
+    source = SOURCE_SKILLS[lang]
+    name = TARGET_NAMES[lang]
+    return {
+        "claude-code": (
+            ("skill", source, ".claude/skills/" + name, True),
+        ),
+        "codex": (
+            ("skill", source, ".agents/skills/" + name, True),
+        ),
+    }
 
 
 def _sha256(path: Path) -> str:
@@ -80,11 +89,17 @@ def _agents(value: str) -> list[str]:
     return ["claude-code", "codex"] if value == "both" else [value]
 
 
-def _plan(project: Path, selected: list[str], force: bool) -> tuple[list[dict], list[str]]:
+def _plan(project: Path, selected: list[str], force: bool, lang: str) -> tuple[list[dict], list[str]]:
     actions: list[dict] = []
     conflicts: list[str] = []
+    targets = _targets(lang)
+    other_name = TARGET_NAMES["zh-CN" if lang == "en" else "en"]
     for agent in selected:
-        for kind, source, relative, is_dir in TARGETS[agent]:
+        other_root = ".claude/skills" if agent == "claude-code" else ".agents/skills"
+        other_relative = other_root + "/" + other_name
+        if os.path.lexists(project / other_relative):
+            conflicts.append(other_relative + ": another language is already installed")
+        for kind, source, relative, is_dir in targets[agent]:
             if not source.exists():
                 raise FileNotFoundError("source not found: " + str(source))
             target = project / relative
@@ -159,6 +174,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Install the code-review skill.")
     parser.add_argument("--agent", required=True, choices=("claude-code", "codex", "both"),
                         help="host skill layout to install")
+    parser.add_argument("--lang", default="en", choices=("en", "zh-CN"),
+                        help="skill language to install (default: en)")
     parser.add_argument("--project", default=os.getcwd(), help="target project root (default: cwd)")
     parser.add_argument("--force", action="store_true",
                         help="replace existing different files, keeping a timestamped backup")
@@ -173,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
 
     selected = _agents(args.agent)
     try:
-        actions, conflicts = _plan(project, selected, args.force)
+        actions, conflicts = _plan(project, selected, args.force, args.lang)
     except FileNotFoundError as error:
         print("error: " + str(error), file=sys.stderr)
         return 1

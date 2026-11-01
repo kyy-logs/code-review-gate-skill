@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Download and install the code-review skill.")
     parser.add_argument("--agent", required=True, choices=("claude-code", "codex", "both"))
+    parser.add_argument("--lang", default="en", choices=("en", "zh-CN"),
+                        help="skill language to install (default: en)")
     parser.add_argument("--project", default=os.getcwd(), help="target project (default: cwd)")
     parser.add_argument("--ref", default=DEFAULT_REF, help="Git branch or tag to download")
     parser.add_argument("--force", action="store_true", help="replace with a timestamped backup")
@@ -53,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
                 print("error: selected ref has no scripts/install.py", file=sys.stderr)
                 return 1
             command = [sys.executable, str(installer), "--agent", args.agent,
-                       "--project", str(project)]
+                       "--lang", args.lang, "--project", str(project)]
             for flag in ("force", "dry_run", "json"):
                 if getattr(args, flag):
                     command.append("--" + flag.replace("_", "-"))

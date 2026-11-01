@@ -32,6 +32,8 @@ class RemoteInstallerTests(unittest.TestCase):
         cls.source.mkdir()
         shutil.copytree(ROOT / "skills/code-review", cls.source / "skills/code-review",
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        shutil.copytree(ROOT / "skills/code-review-zh", cls.source / "skills/code-review-zh",
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         (cls.source / "scripts").mkdir()
         shutil.copyfile(ROOT / "scripts/install.py", cls.source / "scripts/install.py")
         marker = cls.source / "skills/code-review/fixture-version"
@@ -81,6 +83,12 @@ class RemoteInstallerTests(unittest.TestCase):
         self.assertFalse((self.project / ".codex").exists())
         self.assertFalse((self.project / ".claude").exists())
         self.assertFalse((self.project / "code-review-skill").exists())
+
+    def test_zh_language_is_forwarded_to_installer(self):
+        result = self.install("--agent", "codex", "--lang", "zh-CN")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue((self.project / ".agents/skills/code-review-zh/SKILL.md").is_file())
+        self.assertFalse((self.project / ".agents/skills/code-review").exists())
 
     def test_both_hosts_and_explicit_project_path(self):
         destination = self.directory / "another project"
