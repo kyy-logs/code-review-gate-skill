@@ -1,0 +1,778 @@
+#!/usr/bin/env bash
+# code-review skill 质量度量共用库（与 collect-metrics 同目录）
+# 由同目录 collect-metrics source；随 skill 一起安装。
+
+# --- 拒绝被直接执行 ---
+# 本文件只提供函数，没有任何 CLI。被当成脚本跑，说明调用方写错了。
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  echo "错误: lib-metrics 是共用库，不能直接运行。请用同目录 collect-metrics。" >&2
+  exit 1
+fi
+
+die()  { echo "错误: $*" >&2; exit 1; }
+warn() { echo "警告: $*" >&2; }
+
+# --- 定位项目根 ---
+# 从 $PWD 向上找 docs/work。skill 里的命令是按「在项目根执行」写的，
+# 但 AI 可能从子目录调用；向上查找比信任 cwd 稳。
+_wf_find_root() {
+  local d="$PWD" parent
+  # 【不要走到 "/"】"$d/docs/work" 在 $d="/" 时会拼出 **"//docs/work"**，而
+  # **Windows 把前导 // 当 UNC 网络路径** → stat 走网络解析，实测**单次 2.4 秒**。
+  # 每层另用 "${d%/}" 去尾斜杠，避免 /c 这类路径也拼出双斜杠。
+  while [ -n "$d" ] && [ "$d" != "/" ]; do
+    [ -d "${d%/}/docs/work" ] && { printf '%s\n' "$d"; return 0; }
+    parent="$(dirname "$d")"
+    [ "$parent" = "$d" ] && break     # 已到根（/ 或 C:/）
+    d="$parent"
+  done
+  # 首次运行时 docs/work 还不存在：回退到 git 根。
+  # 目录由 skill 在步骤 1 创建（mkdir -p docs/work/active/{slug}）。
+  git rev-parse --show-toplevel 2>/dev/null && return 0
+  return 1
+}
+
+WF_ROOT="$(_wf_find_root || true)"
+[ -n "$WF_ROOT" ] || die "未安装 code-review skill（从 $PWD 向上找不到 docs/work）"
+
+WF_WORK="$WF_ROOT/docs/work"
+WF_EVENTS="$WF_WORK/workflow-events.log"
+WF_TREND="$WF_WORK/quality-trend.csv"
+
+COVERAGE_TARGET=85
+
+# 分支覆盖率目标。默认取 80%：它是底线规则，比模板里的执行值引用得更广。
+# 注意它**不参与扣分/降档**，只出一个判定位（见 CM_COVERAGE_BRANCH_PASS）。
+COVERAGE_BRANCH_TARGET=80
+
+# 事件日志的列序（改动必须同步改全部 awk 的字段号与 §7.1 的 spec）
+#   1=epoch  2=iso  3=slug  4=profile  5=node  6=event  7=key  8=value
+EV_SCHEMA='#schema=1'
+
+# ---------------------------------------------------------------------------
+# slug
+# ---------------------------------------------------------------------------
+
+validate_slug() {
+  local s="${1:-}"
+  [ -n "$s" ] || die "slug 不能为空"
+  case "$s" in
+    *[!0-9A-Za-z._-]*) die "slug 含非法字符（只允许 0-9 A-Z a-z . _ -）: $s" ;;
+  esac
+  # 白名单挡掉了 /，但 "." 与 ".." 仍能通过字符集，必须单独挡。
+  # 否则将来任何 "$WF_WORK/active/$slug" 形式的路径都会逃出 docs/work。
+  case "$s" in
+    .|..) die "slug 不能是 . 或 .." ;;
+  esac
+}
+
+# 打印 slug 目录；找不到退非 0。
+# active/ 优先，再通配 archive/<年份>/ —— 年份不写死，避免明年失效。
+find_slug_dir() {
+  local slug="${1:-}" hit
+  validate_slug "$slug"
+  if [ -d "$WF_WORK/active/$slug" ]; then
+    printf '%s\n' "$WF_WORK/active/$slug"
+    return 0
+  fi
+  hit="$(find "$WF_WORK/archive" -mindepth 2 -maxdepth 2 -type d -name "$slug" 2>/dev/null || true)"
+  [ -n "$hit" ] || return 1
+  # 用 sed 而非 head：awk/grep 上游收到 SIGPIPE 会退 141，配合 pipefail 会杀掉脚本。
+  printf '%s\n' "$(printf '%s\n' "$hit" | sed -n 1p)"
+}
+
+scorecard_of() { printf '%s\n' "$1/quality-scorecard.txt"; }
+
+# ---------------------------------------------------------------------------
+# 事件日志
+# ---------------------------------------------------------------------------
+
+# 校验该 slug 确实有指标可算。
+#
+# 两道检查都必要：
+#  1. 文件非空 —— awk 对空输入也退 0，不查就会生成一份「全是默认值且不报错」
+#     的 scorecard。这是最糟的失败形态：看起来正常的错数据。
+#  2. **排除 archive 事件后仍有本 slug 的事件** —— archive 子命令自己会先写
+#     一行 archive 事件，若只查「文件里有任何事件」，就是先写后查，永远查不出空；
+#     而且同项目换个 slug 归档时，别的 slug 的事件会掩盖当前 slug 一条指标都没写
+#     的事实，同样落进「全默认值」陷阱。
+require_events() {   # <slug>
+  local slug="${1:-}"
+  [ -s "$WF_EVENTS" ] || die "事件日志为空或不存在: $WF_EVENTS
+       需要先由各节点的 collect-metrics 埋点写入（见 skill 内 scripts/collect-metrics）。"
+  _slug_has_metrics "$slug" || die "slug '$slug' 没有任何指标事件，拒绝生成 scorecard。
+       请先跑该 slug 的埋点：gate-pass / deviation / security / lessons / coverage。
+       （若只想补录，可先跑各项埋点再 archive。）"
+}
+
+# 该 slug 有没有非 archive 的指标事件。
+# 排除 archive 事件是必需的：archive 子命令自己会先写一行 archive 事件，
+# 若不排除就是「先写后查」，永远查不出该 slug 其实一条指标都没有。
+_slug_has_metrics() {   # <slug>
+  [ -s "$WF_EVENTS" ] || return 1
+  awk -F'\t' -v s="$1" '/^#/{next} $3==s && $6!="archive"{n++} END{exit !(n+0>0)}' "$WF_EVENTS"
+}
+
+# 追加事件。单次 printf 落盘：Linux 上小于 PIPE_BUF 的写是原子的，
+# 多行 cat >> 不是。
+append_event() {   # <slug> <profile> <node> <event> <key> <value>
+  local slug="$1" profile="$2" node="$3" ev="$4" key="$5" val="$6"
+  local ts iso
+  validate_slug "$slug"   # 纵深防御：本函数不拼路径，但它是所有写入的必经点
+
+  # epoch 用 bash 内建拿，不起 date 进程。本函数一次埋点调一次、一个需求要调
+  # 十几次、测试里要调上百次 —— 在这台机器上每次 date 是 ~100ms。
+  # 之所以可以放心用 bash 内建：脚本本来就依赖 `date -Iseconds`（GNU 扩展），
+  # macOS 的 BSD date 不支持，所以并没有牺牲可移植性。
+  printf -v ts '%(%s)T' -1
+  iso="$(date -Iseconds)"
+
+  # 消毒：值里的制表符/换行会撕裂 TSV 行，让后续所有解析错位。
+  # 同样改用内建，不起 tr。
+  val="${val//$'\t'/}"; val="${val//$'\n'/}"; val="${val//$'\r'/}"
+  key="${key//$'\t'/}"; key="${key//$'\n'/}"; key="${key//$'\r'/}"
+
+  mkdir -p "$WF_WORK"
+  if [ ! -f "$WF_EVENTS" ]; then
+    printf '%s\n' "$EV_SCHEMA" > "$WF_EVENTS"
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$ts" "$iso" "$slug" "$profile" "$node" "$ev" "$key" "$val" >> "$WF_EVENTS"
+}
+
+# ---------------------------------------------------------------------------
+# profile → 节点列表
+# ---------------------------------------------------------------------------
+# 与 workflow/workflow.yaml 的 profiles: 段一一对应。硬编码而非解析 YAML：
+# 两者同属受管层、同版本发布，漂移风险可控；解析 YAML 需要额外依赖，不值得。
+#
+# 必须有这张表，否则 NODES_PASSED 会按「5 个门禁」而不是「本 profile 的节点」
+# 计数 —— 那样 hotfix（2 节点）或 systematic-debugging（2 节点）一旦走过别的
+# profile 的节点，就会出现 NODES_PASSED > NODES_TOTAL 这种荒谬结果。
+profile_nodes_list() {   # <profile> → 每行一个节点名
+  case "${1:--}" in
+    lite)                  printf 'prd-review\ntech-design\nexecution-plan\ntdd-implementation\ncode-review\n' ;;
+    bootstrap)             printf 'prd-review\narch-design\nscaffold\ntech-design\nexecution-plan\ntdd-implementation\ncode-review\n' ;;
+    hotfix)                printf 'tdd-implementation\ncode-review\n' ;;
+    systematic-debugging)  printf 'systematic-debugging\ncode-review\n' ;;
+    *)                     printf '' ;;   # full 的 nodes 是空数组；onboard/status 不参与流转
+  esac
+}
+
+profile_nodes() {   # <profile> → 节点总数
+  local n
+  n="$(profile_nodes_list "$1" | grep -c . || true)"
+  printf '%s\n' "${n:-0}"
+}
+
+# ---------------------------------------------------------------------------
+# 评分
+# ---------------------------------------------------------------------------
+# 原版没留下 QUALITY_GRADE / QUALITY_SCORE 的算法，只留下 scorecard 的输出契约
+# （上游 27 键；本仓库为分支覆盖率加了 2 个键、为 code-review v2 探针加了 5 个键），
+# 所以这套权重是本工具自定义的首版默认值（见 spec §13 开放问题 1）。
+#
+# 输出两行：score 然后 grade。调用方用 read 接。
+compute_score() {   # <high> <medium> <unreasonable> <coverage_line> <coverage_measured> <lessons_count> <deviation_count> <probe_required_failed> <reconcile_pending>
+  local high="$1" medium="$2" unreasonable="$3"
+  local line="$4" measured="$5" lessons="$6" devcount="$7"
+  local probefail="${8:-0}" recpending="${9:-0}"
+
+  local score=100
+  score=$(( score - high * 10 - medium * 1 ))
+  score=$(( score - unreasonable * 5 ))
+
+  # 覆盖率只在「确实测了」时才参与扣分。未测量不扣 ——
+  # 但不扣的代价由下面的等级封顶找回来（否则永远不配覆盖率工具就能白拿满分）。
+  if [ "$measured" = "true" ] && [ "$line" -lt "$COVERAGE_TARGET" ]; then
+    score=$(( score - 10 ))
+  fi
+
+  # lessons 扣分必须条件化：code-review/SKILL.md 的 HARD-GATE 里那条门禁是
+  # 「**有踩坑但** lessons 未写入」。纯文档改动、无偏离无安全问题时
+  # 不写 lessons 是正常的，不该扣。
+  if [ "$lessons" -eq 0 ] && { [ "$devcount" -gt 0 ] || [ "$high" -gt 0 ]; }; then
+    score=$(( score - 5 ))
+  fi
+
+  [ "$score" -lt 0 ] && score=0
+
+  local grade
+  if [ "$unreasonable" -gt 0 ] \
+     || [ "$probefail" -gt 0 ] || [ "$recpending" -gt 0 ]; then
+    # 与 HARD-GATE 一致：不合理偏离、required 探针未通过、
+    # high finding 未完成 reconciliation 均阻塞。
+    # 合入，评分不该给出及格。
+    # 后两条来自文档 §11.3：code-review 的 gate 是「required probe、
+    # reconciliation、验收、lessons」。
+    grade=D
+  else
+    if   [ "$score" -ge 90 ]; then grade=S
+    elif [ "$score" -ge 80 ]; then grade=A
+    elif [ "$score" -ge 70 ]; then grade=B
+    elif [ "$score" -ge 60 ]; then grade=C
+    else                           grade=D
+    fi
+
+    # 等级封顶：门禁不过就不给高等级。与 code-review/SKILL.md 的 HARD-GATE
+    # 保持一致 —— 那边已经阻塞合入了，这边却给 S，两边会互相矛盾。
+    # 一律用显式 if 而不是 `[ ... ] && grade=X`：后者在条件不成立时整条命令
+    # 返回非 0，在 set -e 下会直接杀掉脚本。
+    if [ "$measured" != "true" ]; then
+      # 未测量：否则「永远不配覆盖率工具」就能白拿 S
+      if [ "$grade" = "S" ]; then grade=A; fi
+    elif [ "$line" -lt "$COVERAGE_TARGET" ]; then
+      # 已测但不达标，按**缺口程度**分档：0% 与 84% 都是「不达标」，但一个
+      # 是完全没测、一个是差一点，固定扣 10 分会让两者得到完全相同的输出，
+      # 尺度就失去了反映改进的能力。
+      if [ "$line" -lt 60 ]; then
+        case "$grade" in S|A|B) grade=C ;; esac
+      else
+        case "$grade" in S|A) grade=B ;; esac
+      fi
+    fi
+  fi
+
+  # 把分数压到最终等级所在档位的上限。
+  # 不压的话会输出「D (95/100)」这种分数与等级互相打脸的结果 ——
+  # 用户看分数以为不错，等级却是最差。分数必须永远落在它自己指示的档位里。
+  case "$grade" in
+    S) if [ "$score" -gt 100 ]; then score=100; fi ;;
+    A) if [ "$score" -gt 89  ]; then score=89;  fi ;;
+    B) if [ "$score" -gt 79  ]; then score=79;  fi ;;
+    C) if [ "$score" -gt 69  ]; then score=69;  fi ;;
+    D) if [ "$score" -gt 59  ]; then score=59;  fi ;;
+  esac
+
+  printf '%s\n%s\n' "$score" "$grade"
+}
+
+# ---------------------------------------------------------------------------
+# scorecard 渲染
+# ---------------------------------------------------------------------------
+
+# 值一律加双引号并转义。scorecard 自称「bash 可直接 source」，
+# 但 LESSONS_FILES 这类值来自模型产出的自由文本：不转义的话，
+# 一个未加引号的空格就会让 source 变成语法错误，值里的 $(...) 更会
+# 变成执行任意命令。本库内部一律用 grep/awk 解析，绝不 source。
+# 把 <值> 转义加引号后写进变量 <名>。
+#
+# **用 printf -v 直接赋值，而不是 `x="$(...)"`** —— 后者每次都要 fork 一个子壳。
+# render_scorecard 每个键要处理一次，而每个 `$(...)` 就是一次 fork，在这台机器上
+# 约 1.2 秒。改成 printf -v 后是纯内建，零 fork。
+#
+# 转义本身也走内建 ${var//pat/repl}，不起 printf|tr|sed（那又是个三进程的老写法，
+# 27×3=81 次 spawn，实测 9 秒）。四条替换的顺序与最早的 sed 版一致：先反斜杠，
+# 再引号 / 美元 / 反引号。等价性用 17 个用例（含 $、反引号、反斜杠、引号、中文、
+# 换行）逐字节比对过。
+_qv() {   # <变量名> <值>
+  local __v="${2:-}"
+  __v="${__v//$'\n'/}"; __v="${__v//$'\r'/}"
+  __v="${__v//\\/\\\\}"
+  __v="${__v//\"/\\\"}"
+  __v="${__v//\$/\\\$}"
+  __v="${__v//\`/\\\`}"
+  printf -v "$1" '"%s"' "$__v"
+}
+
+# 一次 awk 扫完整个事件日志，输出 `<key>\t<value>` 行。
+# 按 epoch 取**最后一次**，同 epoch 取文件中靠后的。
+_metrics_snapshot() {   # <slug>
+  [ -s "$WF_EVENTS" ] || return 0
+  awk -F'\t' -v s="$1" '
+    /^#/ { next }
+    NF < 8 { next }
+    $3 != s { next }
+    {
+      ev = $6; node = $5; key = $7; val = $8; ep = $1 + 0
+      if (ev == "archive") {
+        if (key == "profile" && ep >= a_ep) { a_ep = ep; profile = val }
+      } else if (ev == "review-sync") {
+        # 每批同步是完整快照；原始探针和最终对账都不继承上一批的旧计数。
+        for (k in p) delete p[k]
+        for (k in p_ep) delete p_ep[k]
+        delete m["metric:reconcile:total"]; delete m["metric:reconcile:done"]
+        delete m_ep["metric:reconcile:total"]; delete m_ep["metric:reconcile:done"]
+        rec_seen = 0
+        if (val == "probes") {
+          delete seen["code-review"]; delete status["code-review"]; delete st_ep["code-review"]
+        }
+      } else if (ev == "gate-pass") {
+        if (node != "" && node != "-") {
+          seen[node] = 1
+          if (key == "status" && ep >= st_ep[node]) { st_ep[node] = ep; status[node] = val }
+        }
+      } else if (ev == "rollback") {
+        rb++
+      } else if (ev == "metric:probe") {
+        # 探针明细按 **node（=探针名）+ key** 取最后一次。复合键里必须带 node：
+        # 各探针独立上报 high，若共用 metric:probe:low 这一个键，
+        # 后写的会盖掉先写的，聚合出来只剩最后一个探针的数字 —— 少算且不报错。
+        k = node ":" key
+        if (ep >= p_ep[k]) { p_ep[k] = ep; p[k] = val }
+      } else if (ev ~ /^metric:/) {
+        k = ev ":" key
+        if (ep >= m_ep[k]) { m_ep[k] = ep; m[k] = val }
+        # 「有没有上报过」只能**在读到事件这一刻**置位。**不能事后用
+        # `("metric:reconcile:total" in m)` 去查** —— awk 里**引用数组元素就会创建它**，
+        # 而下面 END 里的 printf 会先引用 m["metric:reconcile:total"]，于是任何
+        # 「取不到」都被那个 printf 自己变成了「取得到」，永远返回 1。实测踩过：
+        # 反向 fixture 全绿不了才发现（正向 fixture 全是 1，看不出区别）。
+        if (ev == "metric:reconcile") rec_seen = 1
+      }
+    }
+    END {
+      # 探针聚合。每个探针先按 node 归并出自己的 status/required/severity，
+      # 再统一求和 —— 不能在扫描过程中累加，那样同一个探针被重跑时会重复计数。
+      for (k in p) {
+        split(k, a, ":")
+        pn = a[1]; pk = a[2]
+        if (!(pn in p_seen)) { p_seen[pn] = 1; p_total++ }
+        if (pk == "status") {
+          p_status[pn] = p[k]
+          # skipped 为按约定正常跳过；只有 failed / error 计为失败。
+          if (p[k] == "failed" || p[k] == "error") p_bad[pn] = 1
+        } else if (pk == "required") {
+          if (p[k] == "true") p_req[pn] = 1
+        } else if (pk == "low") {
+          p_low += p[k] + 0
+        } else if (pk == "high") {
+          p_high += p[k] + 0
+        }
+      }
+      for (pn in p_seen) if (p_req[pn] && p_bad[pn]) p_reqfail++
+
+      printf "profile\t%s\n", profile
+      # 门禁：埋点只写在成功路径上，所以「有 gate-pass 事件」本身就意味着通过；
+      # 只有显式带 status 键时才用它（将来 skill 补 status 时无需改这里）。
+      n = split("prd-review tech-design execution-plan tdd-implementation code-review", nodes, " ")
+      for (i = 1; i <= n; i++) {
+        nn = nodes[i]
+        if (status[nn] != "")  g = status[nn]
+        else if (seen[nn])     g = "PASSED"
+        else                   g = "PENDING"
+        printf "gate:%s\t%s\n", nn, g
+      }
+      printf "metric:coverage:line\t%s\n",       m["metric:coverage:line"]
+      printf "metric:coverage:branch\t%s\n",     m["metric:coverage:branch"]
+      printf "metric:deviation:count\t%s\n",     m["metric:deviation:count"]
+      printf "metric:deviation:reasonable\t%s\n", m["metric:deviation:reasonable"]
+      printf "metric:security:low\t%s\n",   m["metric:security:low"]
+      printf "metric:security:high\t%s\n",       m["metric:security:high"]
+      printf "metric:security:medium\t%s\n",     m["metric:security:medium"]
+      printf "metric:lessons:count\t%s\n",       m["metric:lessons:count"]
+      printf "metric:lessons:files\t%s\n",       m["metric:lessons:files"]
+      printf "probe:total\t%d\n",               p_total + 0
+      printf "probe:required_failed\t%d\n",     p_reqfail + 0
+      printf "probe:findings_low\t%d\n",   p_low + 0
+      printf "probe:findings_high\t%d\n",       p_high + 0
+      printf "metric:reconcile:total\t%s\n",     m["metric:reconcile:total"]
+      printf "metric:reconcile:done\t%s\n",      m["metric:reconcile:done"]
+      # 「**有没有上报过**」必须与「上报了 0」分开报：下面 shell 侧对 total/done 的
+      # 兜底是 `${v:-0}`，取不到就是 0 —— 于是「从没跑过 reconcile」与「跑过、结论是
+      # 没有待办」塌成同一个值。而这两个状态的含义正相反：一个说「核过了」，
+      # 一个说「根本没核」。同 SKILL.md 里那句「跳了和没跑要能区分」。
+      # 标志位在扫描时置（见上面 `rec_seen` 那段注释），这里只负责打印。
+      printf "reconcile:reported\t%d\n",        rec_seen + 0
+      printf "rollback\t%d\n", rb + 0
+    }
+  ' "$WF_EVENTS"
+}
+
+# 把快照灌进 CM_* 变量。
+# 用 case 显式赋值而不是 eval —— 值来自事件日志，eval 等于给任意字符串求值的机会。
+# 格式恒为「键 + 制表符 + 值」，值永远在最后一列，所以 read 拆两列是安全的。
+#
+# ⚠️ **但下面那条注释原先把 read 的行为说反了**，独立审计实测纠正：
+#    制表符属于 IFS **空白类**，所以 `read -r k v` 会
+#      `key\t`        → v 为空（**行尾空字段被剥掉**，不是"正常保留"）
+#      `key\t\tval`   → v=val（**中间空字段被折叠**）
+#    当前只有两列、值永在末列，所以**无功能影响** —— 但下一个人若照那句错注释
+#    去加第三列（比如 `key\tcount\tvalue`），空的一列会被吃掉、**整体错位**。
+#    要真正保列，得用 `read -r k v rest` 或干脆不上 `read`。
+_apply_snapshot() {   # <slug>
+  local k v
+  if [ -f "$WF_EVENTS" ]; then
+    awk -F'\t' -v s="$1" '
+      $3 == s && $6 == "metric:security" && $7 !~ /^(high|medium|low)$/ { exit 1 }
+      $3 == s && $6 == "metric:probe" && $7 !~ /^(status|required|duration|high|medium|low)$/ { exit 1 }
+    ' "$WF_EVENTS" || die "指标字段不受支持，请显式迁移历史记录"
+  fi
+  while IFS="$(printf '\t')" read -r k v; do
+    case "$k" in
+      profile)                      CM_PROFILE="${v:-unknown}" ;;
+      gate:prd-review)              CM_GATE_prd_review="$v" ;;
+      gate:tech-design)             CM_GATE_tech_design="$v" ;;
+      gate:execution-plan)          CM_GATE_execution_plan="$v" ;;
+      gate:tdd-implementation)      CM_GATE_tdd_implementation="$v" ;;
+      gate:code-review)             CM_GATE_code_review="$v" ;;
+      metric:coverage:line)         CM_COVERAGE_LINE="$v" ;;
+      metric:coverage:branch)       CM_COVERAGE_BRANCH="$v" ;;
+      metric:deviation:count)       CM_DEVIATION_COUNT="${v:-0}" ;;
+      metric:deviation:reasonable)  CM_DEVIATION_REASONABLE="${v:-0}" ;;
+      metric:security:low)     CM_SECURITY_LOW="${v:-0}" ;;
+      metric:security:high)         CM_SECURITY_HIGH="${v:-0}" ;;
+      metric:security:medium)       CM_SECURITY_MEDIUM="${v:-0}" ;;
+      metric:lessons:count)         CM_LESSONS_WRITTEN="${v:-0}" ;;
+      metric:lessons:files)         CM_LESSONS_FILES="$v" ;;
+      probe:total)                  CM_PROBE_TOTAL="${v:-0}" ;;
+      probe:required_failed)        CM_PROBE_REQUIRED_FAILED="${v:-0}" ;;
+      probe:findings_low)      CM_PROBE_FINDINGS_LOW="${v:-0}" ;;
+      probe:findings_high)          CM_PROBE_FINDINGS_HIGH="${v:-0}" ;;
+      metric:reconcile:total)       CM_RECONCILE_TOTAL="${v:-0}" ;;
+      metric:reconcile:done)        CM_RECONCILE_DONE="${v:-0}" ;;
+      reconcile:reported)           CM_RECONCILE_REPORTED="${v:-0}" ;;
+      rollback)                     CM_ROLLBACK_COUNT="${v:-0}" ;;
+    esac
+  done < <(_metrics_snapshot "$1")
+
+  # 快照缺项时的兜底（该 slug 一条相关事件都没有）
+  CM_PROFILE="${CM_PROFILE:-unknown}"
+  CM_COVERAGE_LINE="${CM_COVERAGE_LINE:-}"
+  CM_COVERAGE_BRANCH="${CM_COVERAGE_BRANCH:-}"
+  CM_DEVIATION_COUNT="${CM_DEVIATION_COUNT:-0}"
+  CM_DEVIATION_REASONABLE="${CM_DEVIATION_REASONABLE:-0}"
+  CM_SECURITY_LOW="${CM_SECURITY_LOW:-0}"
+  CM_SECURITY_HIGH="${CM_SECURITY_HIGH:-0}"
+  CM_SECURITY_MEDIUM="${CM_SECURITY_MEDIUM:-0}"
+  CM_LESSONS_WRITTEN="${CM_LESSONS_WRITTEN:-0}"
+  CM_LESSONS_FILES="${CM_LESSONS_FILES:-}"
+  CM_PROBE_TOTAL="${CM_PROBE_TOTAL:-0}"
+  CM_PROBE_REQUIRED_FAILED="${CM_PROBE_REQUIRED_FAILED:-0}"
+  CM_PROBE_FINDINGS_LOW="${CM_PROBE_FINDINGS_LOW:-0}"
+  CM_PROBE_FINDINGS_HIGH="${CM_PROBE_FINDINGS_HIGH:-0}"
+  CM_RECONCILE_TOTAL="${CM_RECONCILE_TOTAL:-0}"
+  CM_RECONCILE_DONE="${CM_RECONCILE_DONE:-0}"
+  CM_RECONCILE_REPORTED="${CM_RECONCILE_REPORTED:-0}"
+  CM_ROLLBACK_COUNT="${CM_ROLLBACK_COUNT:-0}"
+  CM_GATE_prd_review="${CM_GATE_prd_review:-PENDING}"
+  CM_GATE_tech_design="${CM_GATE_tech_design:-PENDING}"
+  CM_GATE_execution_plan="${CM_GATE_execution_plan:-PENDING}"
+  CM_GATE_tdd_implementation="${CM_GATE_tdd_implementation:-PENDING}"
+  CM_GATE_code_review="${CM_GATE_code_review:-PENDING}"
+}
+
+# 按当前 CM_PROFILE 统计节点完成情况。CM_PROFILE 变化后必须重算。
+#
+# 只统计本 profile 实际包含的节点：埋点是全局的（5 个门禁），若不按 profile
+# 过滤，hotfix / systematic-debugging 这种 2 节点的 profile 一旦走过别的
+# profile 的节点，就会算出 NODES_PASSED > NODES_TOTAL。
+_recount_nodes() {
+  CM_NODES_TOTAL="$(profile_nodes "$CM_PROFILE")"
+  CM_NODES_PASSED=0
+  CM_NODES_SKIPPED=0
+  local node st
+  # 遍历当前 profile 的节点表，统计已通过和已跳过的节点。
+  while IFS= read -r node; do
+    [ -n "$node" ] || continue
+    case "$node" in
+      prd-review)          st="$CM_GATE_prd_review" ;;
+      tech-design)         st="$CM_GATE_tech_design" ;;
+      execution-plan)      st="$CM_GATE_execution_plan" ;;
+      tdd-implementation)  st="$CM_GATE_tdd_implementation" ;;
+      code-review)         st="$CM_GATE_code_review" ;;
+      *)                   continue ;;
+    esac
+    case "$st" in
+      PASSED)    CM_NODES_PASSED=$(( CM_NODES_PASSED + 1 )) ;;
+      SKIPPED:*) CM_NODES_SKIPPED=$(( CM_NODES_SKIPPED + 1 )) ;;
+    esac
+  done <<< "$(profile_nodes_list "$CM_PROFILE")"
+}
+
+# 本 profile 里仍无门禁记录的节点数。用于 archive 的告警。
+_pending_count() {
+  local node st n=0
+  while IFS= read -r node; do
+    [ -n "$node" ] || continue
+    case "$node" in
+      prd-review)          st="$CM_GATE_prd_review" ;;
+      tech-design)         st="$CM_GATE_tech_design" ;;
+      execution-plan)      st="$CM_GATE_execution_plan" ;;
+      tdd-implementation)  st="$CM_GATE_tdd_implementation" ;;
+      code-review)         st="$CM_GATE_code_review" ;;
+      *)                   continue ;;
+    esac
+    if [ "$st" = "PENDING" ]; then n=$(( n + 1 )); fi
+  done <<< "$(profile_nodes_list "$CM_PROFILE")"
+  printf '%s\n' "$n"
+}
+
+# 收集一个 slug 的全部指标到全局变量，供 render 与 dashboard 共用。
+# 用普通变量而非关联数组：macOS 自带 bash 3.2 没有关联数组。
+collect_metrics() {   # <slug>
+  CM_SLUG="$1"
+  validate_slug "$CM_SLUG"
+
+  # 通过批量日志读取加载本次审查的全部派生指标。
+  _apply_snapshot "$CM_SLUG"
+
+  # execution-plan 在本版**没有任何 gate 埋点**（全库 grep gate-pass 只有 4 处），
+  # 因此它永远是 PENDING。如实反映，不臆造。
+  # （注意：这与 hook 采集的 node-start/node-end 是两回事 —— 后者能证明该节点
+  #   「跑过」，但不代表它的门禁被校验过。所以这里仍然保持 PENDING。）
+
+  CM_COVERAGE_MEASURED=false
+  case "$CM_COVERAGE_LINE" in
+    ''|*[!0-9]*) ;;                 # 非数字或空 → 未测量
+    *) CM_COVERAGE_MEASURED=true ;;
+  esac
+  # 分支的「是否测过」必须在下面把它兜底成 0 **之前**取，否则 0% 与「没测」
+  # 会变成同一个值，判定位就再也分不出这两件事了。
+  CM_COVERAGE_BRANCH_MEASURED=false
+  case "$CM_COVERAGE_BRANCH" in
+    ''|*[!0-9]*) ;;
+    *) CM_COVERAGE_BRANCH_MEASURED=true ;;
+  esac
+  [ -n "$CM_COVERAGE_LINE" ] || CM_COVERAGE_LINE=0
+  [ -n "$CM_COVERAGE_BRANCH" ] || CM_COVERAGE_BRANCH=0
+
+  if [ "$CM_COVERAGE_MEASURED" = "true" ]; then
+    if [ "$CM_COVERAGE_LINE" -ge "$COVERAGE_TARGET" ]; then
+      CM_COVERAGE_PASS=true
+    else
+      CM_COVERAGE_PASS=false
+    fi
+  else
+    # 复用 scorecard 第 9 行已有的 SKIPPED:<reason> 枚举，不自创新语法。
+    # 注意不能记 FAILED —— 那会让两个结论为「通过，可合入」的真实历史需求
+    # （其 code-review.md 明确写了「未配置 JaCoCo」，且从来没有覆盖率数字）
+    # 全部落到 D 档，与真实结论直接冲突。
+    CM_COVERAGE_PASS="SKIPPED:未测量"
+    case "$CM_GATE_tdd_implementation" in
+      PENDING) CM_GATE_tdd_implementation="SKIPPED:未测量" ;;
+    esac
+  fi
+
+  # 分支覆盖率：**只出判定位，不参与扣分与降档**。
+  # 为什么不动评分：skills 的 HARD-GATE 只写了行覆盖率。评分脚本自行加码，
+  # 会把「已按流程走完」的需求判低一档 —— 那是脚本越权，且会让 scorecard
+  # 与 skill 里写的门禁对不上。
+  # 那为什么还要这个键：此前分支值采了、也渲染了，却只是一个裸数字，读的人
+  # 无从判断 73% 算好还是算差，而且目标值上游两处还互相矛盾（见文件头）。
+  # 给出判定位 = 把「阈值是多少、过没过」显式化，消费端不必自己记住。
+  case "$CM_COVERAGE_BRANCH_MEASURED" in
+    true)
+      if [ "$CM_COVERAGE_BRANCH" -ge "$COVERAGE_BRANCH_TARGET" ]; then
+        CM_COVERAGE_BRANCH_PASS=true
+      else
+        CM_COVERAGE_BRANCH_PASS=false
+      fi
+      ;;
+    *) CM_COVERAGE_BRANCH_PASS="SKIPPED:未测量" ;;
+  esac
+
+  [ "$CM_DEVIATION_COUNT" -ge 0 ] 2>/dev/null || CM_DEVIATION_COUNT=0
+  [ "$CM_DEVIATION_REASONABLE" -ge 0 ] 2>/dev/null || CM_DEVIATION_REASONABLE=0
+  # 防负数：合理偏离数被误报得比总数还大时不能变成负分加成。
+  CM_DEVIATION_UNREASONABLE=$(( CM_DEVIATION_COUNT - CM_DEVIATION_REASONABLE ))
+  [ "$CM_DEVIATION_UNREASONABLE" -lt 0 ] && CM_DEVIATION_UNREASONABLE=0
+
+  # reconciliation 的待办数 = high finding 总数 - 已逐项处理数。
+  # 与 DEVIATION_UNREASONABLE 同样防负数：命令侧已挡了 done>total，这里是
+  # 事件日志被手工改过时的第二道。
+  [ "$CM_RECONCILE_TOTAL" -ge 0 ] 2>/dev/null || CM_RECONCILE_TOTAL=0
+  [ "$CM_RECONCILE_DONE"  -ge 0 ] 2>/dev/null || CM_RECONCILE_DONE=0
+  CM_RECONCILE_PENDING=$(( CM_RECONCILE_TOTAL - CM_RECONCILE_DONE ))
+  [ "$CM_RECONCILE_PENDING" -lt 0 ] && CM_RECONCILE_PENDING=0
+
+  # 节点计数依赖 CM_PROFILE，而 run_scorecard 之后可能用命令行覆盖它 ——
+  # 所以抽成函数，覆盖后必须重算，否则会拿旧 profile 的节点表计数。
+  _recount_nodes
+
+  # 无任何事件记录起止，恒 0。不用事件首末时间：首个事件是 prd-review 通过，
+  # 会系统性漏掉整个 PRD 阶段，得到一个偏小却看似精确的数。
+  CM_WALL_TIME_MINUTES=0
+
+  local scored
+  scored="$(compute_score "$CM_SECURITY_HIGH" "$CM_SECURITY_MEDIUM" \
+                          "$CM_DEVIATION_UNREASONABLE" "$CM_COVERAGE_LINE" "$CM_COVERAGE_MEASURED" \
+                          "$CM_LESSONS_WRITTEN" "$CM_DEVIATION_COUNT" \
+                          "$CM_PROBE_REQUIRED_FAILED" "$CM_RECONCILE_PENDING")"
+  CM_QUALITY_SCORE="$(printf '%s\n' "$scored" | sed -n 1p)"
+  CM_QUALITY_GRADE="$(printf '%s\n' "$scored" | sed -n 2p)"
+
+  CM_GENERATED_AT="$(date -Iseconds)"
+}
+
+# 渲染 scorecard。头注释如实写明本版的采集局限，
+# 而不是给出一个「看起来精确其实是错的」完成率。
+#
+# 【维护提示】下面的 heredoc 是**无引号**的（键值里的 $(_quote_value ...) 必须
+# 展开）。因此注释正文里若需要出现美元符号，必须写成转义形式，否则会被 shell
+# 当真展开 —— 在 set -u 下会直接中止脚本。写注释时最容易踩这个坑。
+render_scorecard() {
+  # 先把所有值转义好放进变量，再到 heredoc 里引用。
+  # **不要在 heredoc 里写 $(...) 取值** —— 每个 $(...) 都是一次 fork，这里几十个就是
+  # 实测 1.2 秒。这是与 _quote_value 同一类陷阱的第二次出现：换掉了函数里的
+  # 三个进程，却漏掉了调用点的子壳。
+  _qv _q_SLUG "$CM_SLUG"
+  _qv _q_PROFILE "$CM_PROFILE"
+  _qv _q_GENERATED_AT "$CM_GENERATED_AT"
+  _qv _q_GATE_prd_review "$CM_GATE_prd_review"
+  _qv _q_GATE_tech_design "$CM_GATE_tech_design"
+  _qv _q_GATE_execution_plan "$CM_GATE_execution_plan"
+  _qv _q_GATE_tdd_implementation "$CM_GATE_tdd_implementation"
+  _qv _q_GATE_code_review "$CM_GATE_code_review"
+  _qv _q_COVERAGE_LINE "$CM_COVERAGE_LINE"
+  _qv _q_COVERAGE_BRANCH "$CM_COVERAGE_BRANCH"
+  _qv _q_COVERAGE_TARGET "$COVERAGE_TARGET"
+  _qv _q_COVERAGE_PASS "$CM_COVERAGE_PASS"
+  _qv _q_COVERAGE_BRANCH_TARGET "$COVERAGE_BRANCH_TARGET"
+  _qv _q_COVERAGE_BRANCH_PASS "$CM_COVERAGE_BRANCH_PASS"
+  _qv _q_DEVIATION_COUNT "$CM_DEVIATION_COUNT"
+  _qv _q_DEVIATION_REASONABLE "$CM_DEVIATION_REASONABLE"
+  _qv _q_DEVIATION_UNREASONABLE "$CM_DEVIATION_UNREASONABLE"
+  _qv _q_SECURITY_LOW "$CM_SECURITY_LOW"
+  _qv _q_SECURITY_HIGH "$CM_SECURITY_HIGH"
+  _qv _q_SECURITY_MEDIUM "$CM_SECURITY_MEDIUM"
+  _qv _q_LESSONS_WRITTEN "$CM_LESSONS_WRITTEN"
+  _qv _q_LESSONS_FILES "$CM_LESSONS_FILES"
+  _qv _q_PROBE_TOTAL "$CM_PROBE_TOTAL"
+  _qv _q_PROBE_REQUIRED_FAILED "$CM_PROBE_REQUIRED_FAILED"
+  _qv _q_PROBE_FINDINGS_LOW "$CM_PROBE_FINDINGS_LOW"
+  _qv _q_PROBE_FINDINGS_HIGH "$CM_PROBE_FINDINGS_HIGH"
+  _qv _q_RECONCILE_PENDING "$CM_RECONCILE_PENDING"
+  _qv _q_RECONCILE_REPORTED "$CM_RECONCILE_REPORTED"
+  _qv _q_NODES_TOTAL "$CM_NODES_TOTAL"
+  _qv _q_NODES_PASSED "$CM_NODES_PASSED"
+  _qv _q_NODES_SKIPPED "$CM_NODES_SKIPPED"
+  _qv _q_WALL_TIME_MINUTES "$CM_WALL_TIME_MINUTES"
+  _qv _q_ROLLBACK_COUNT "$CM_ROLLBACK_COUNT"
+  _qv _q_QUALITY_GRADE "$CM_QUALITY_GRADE"
+  _qv _q_QUALITY_SCORE "$CM_QUALITY_SCORE"
+
+  cat <<EOF
+# Quality Scorecard — auto-generated by scripts/collect-metrics
+# 格式: key=value，值已加双引号；请用 grep/awk 解析，不要 source
+# 生成命令: scripts/collect-metrics archive <slug>
+#
+# 本版采集局限（如实记录，勿据此判断流程走完与否）：
+#   - 埋点仅覆盖 4 个节点（prd-review / tech-design / tdd-implementation / code-review）
+#     → GATE_execution_plan 恒为 PENDING，NODES_PASSED/NODES_TOTAL 系统性偏低
+#   - WALL_TIME_MINUTES 未采集，恒为 0
+#
+# 取值域说明（模板 quality-scorecard.txt 未定义的部分，在此声明）：
+#   - COVERAGE_PASS / COVERAGE_BRANCH_PASS 为 true | false | SKIPPED:<reason>。
+#     模板第 20 行的默认值 false 只是初值；覆盖率未测量时本工具写 SKIPPED:未测量，
+#     与 GATE_* 同一套枚举
+#   - COVERAGE_LINE / COVERAGE_BRANCH 保持数值型（未测量时为 0），好让数值比较
+#     不至于报错
+#   - COVERAGE_BRANCH_PASS 只是判定位：**分支不达标不影响 QUALITY_SCORE 与
+#     QUALITY_GRADE**。门禁（HARD-GATE）只定义了行覆盖率
+#   - PROBE_* 是**聚合值**，逐探针明细在 docs/work/active/<slug>/probes/ 下。
+#     PROBE_REQUIRED_FAILED 只统计注册表标了 required 且状态为 failed/error 的
+#     探针 —— **skipped 不算失败**
+#   - sync 按注册表校验报告是否齐全并读取 required；缺失报告不能按零问题通过。
+#     结构校验不证明 AI 实际完成了检查，也不证明 finding 的语义判断正确。
+#   - RECONCILE_PENDING = high finding 总数 - 已逐项处理数。> 0 即卡门禁
+#   - RECONCILE_REPORTED = 1|0，**本批报告是否已最终同步**，与 PENDING 的 0 不是一回事：
+#     total/done 取不到时兜底是 0，那会把「从没跑过」伪装成「核过了、没有待办」
+
+SLUG=$_q_SLUG
+PROFILE=$_q_PROFILE
+GENERATED_AT=$_q_GENERATED_AT
+
+# Gate 通过情况 (PASSED | SKIPPED:<reason> | FAILED | PENDING)
+GATE_prd_review=$_q_GATE_prd_review
+GATE_tech_design=$_q_GATE_tech_design
+GATE_execution_plan=$_q_GATE_execution_plan
+GATE_tdd_implementation=$_q_GATE_tdd_implementation
+GATE_code_review=$_q_GATE_code_review
+
+# 覆盖率指标
+COVERAGE_LINE=$_q_COVERAGE_LINE
+COVERAGE_BRANCH=$_q_COVERAGE_BRANCH
+COVERAGE_TARGET=$_q_COVERAGE_TARGET
+COVERAGE_PASS=$_q_COVERAGE_PASS
+COVERAGE_BRANCH_TARGET=$_q_COVERAGE_BRANCH_TARGET
+COVERAGE_BRANCH_PASS=$_q_COVERAGE_BRANCH_PASS
+
+# 偏离指标
+DEVIATION_COUNT=$_q_DEVIATION_COUNT
+DEVIATION_REASONABLE=$_q_DEVIATION_REASONABLE
+DEVIATION_UNREASONABLE=$_q_DEVIATION_UNREASONABLE
+
+# 安全指标（high / medium / low）
+SECURITY_LOW=$_q_SECURITY_LOW
+SECURITY_HIGH=$_q_SECURITY_HIGH
+SECURITY_MEDIUM=$_q_SECURITY_MEDIUM
+
+# Lessons 指标
+LESSONS_WRITTEN=$_q_LESSONS_WRITTEN
+LESSONS_FILES=$_q_LESSONS_FILES
+
+# 探针指标（逐探针明细见同目录 probes/）
+PROBE_TOTAL=$_q_PROBE_TOTAL
+PROBE_REQUIRED_FAILED=$_q_PROBE_REQUIRED_FAILED
+PROBE_FINDINGS_LOW=$_q_PROBE_FINDINGS_LOW
+PROBE_FINDINGS_HIGH=$_q_PROBE_FINDINGS_HIGH
+RECONCILE_PENDING=$_q_RECONCILE_PENDING
+# 0 = 从没上报过 reconcile（步骤 4/5 没走完）。与 PENDING=0 的含义正相反：
+# 一个说「核过了、没有待办」，一个说「根本没核」。归档后只剩这份 scorecard 时，
+# 没有这个键就再也分不出两者。
+RECONCILE_REPORTED=$_q_RECONCILE_REPORTED
+
+# 流程指标
+NODES_TOTAL=$_q_NODES_TOTAL
+NODES_PASSED=$_q_NODES_PASSED
+NODES_SKIPPED=$_q_NODES_SKIPPED
+WALL_TIME_MINUTES=$_q_WALL_TIME_MINUTES
+ROLLBACK_COUNT=$_q_ROLLBACK_COUNT
+
+# 综合评分 (S/A/B/C/D)
+QUALITY_GRADE=$_q_QUALITY_GRADE
+QUALITY_SCORE=$_q_QUALITY_SCORE
+EOF
+}
+
+# 原子写 scorecard：同目录 mktemp + mv。
+# 跨设备 mv 是「拷贝后 unlink」，中断会留下被截断的文件；而同目录 mv 是
+# 原子 rename。这一点尤其要命：scorecard 写坏之后，code-review 归档时会
+# 把整个 slug 目录 mv 进 archive，损坏就永久固化了。
+write_scorecard_atomic() {   # <slug_dir>
+  local dir="$1" tmp
+  [ -d "$dir" ] || die "目录不存在: $dir"
+  tmp="$(mktemp "$dir/quality-scorecard.txt.XXXXXX")"
+  render_scorecard > "$tmp"
+  mv "$tmp" "$(scorecard_of "$dir")"
+}
+
+# CSV upsert：按 slug 覆盖旧行。
+# 追加会产生重复行，而重跑 archive 是常态（review 打回 → 修 → 再 review）。
+trend_upsert() {
+  local tmp line
+  mkdir -p "$WF_WORK"
+  local header="slug,profile,generated_at,score,grade,coverage_line,deviation,security_low,lessons,wall_time"
+  if [ -s "$WF_TREND" ]; then
+    [ "$(head -n 1 "$WF_TREND" | tr -d '\r')" = "$header" ] \
+      || die "趋势字段不受支持，请显式迁移历史文件"
+  fi
+  line="$CM_SLUG,$CM_PROFILE,$CM_GENERATED_AT,$CM_QUALITY_SCORE,$CM_QUALITY_GRADE,$CM_COVERAGE_LINE,$CM_DEVIATION_COUNT,$CM_SECURITY_LOW,$CM_LESSONS_WRITTEN,$CM_WALL_TIME_MINUTES"
+
+  if [ ! -s "$WF_TREND" ]; then
+    # lessons 文件列表不进 CSV：它含空格，将来有人加逗号列就会破格式。
+    printf '%s\n' "$header" > "$WF_TREND"
+  fi
+
+  tmp="$(mktemp "$WF_WORK/quality-trend.csv.XXXXXX")"
+  awk -F',' -v s="$CM_SLUG" 'NR==1 || $1 != s' "$WF_TREND" > "$tmp"
+  printf '%s\n' "$line" >> "$tmp"
+  mv "$tmp" "$WF_TREND"
+}
+
+# 生成 scorecard + 更新趋势。
+run_scorecard() {   # <slug> <profile>
+  local slug="$1" profile="${2:-}" dir
+  require_events "$slug"
+  collect_metrics "$slug"
+  # 命令行给的 profile 优先于事件里的（archive 子命令会显式传）。
+  # NODES_TOTAL 是 profile 的函数，覆盖后必须重算，否则会拿旧 profile 的节点数。
+  if [ -n "$profile" ] && [ "$profile" != "-" ]; then
+    CM_PROFILE="$profile"
+    _recount_nodes
+  fi
+  dir="$(find_slug_dir "$slug")" || die "找不到 slug 目录: $slug"
+  write_scorecard_atomic "$dir"
+  trend_upsert
+}

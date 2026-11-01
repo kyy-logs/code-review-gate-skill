@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+# code-review skill —— 规则检测模式扫描（repo-guard 探针的第一步）
+# rule-grep —— 把规则包里**已经写好的「检测模式」**跑一遍，先筛出候选行。
+#
+# 【为什么要它】
+# 规则包里带「检测模式」（正则）的条目，不该让 AI **用眼睛执行正则**。
+# 先执行已有模式筛选候选，再由 AI 结合规则和上下文复核。
+#
+# 【单一事实源】正则**从规则文件里抽**，不在这里重抄一遍。
+# 两处各写一份必然漂；抽出来用，规则改了这里自动跟上。
+#
+# ⚠️ 它只**筛**，不**判**：
+#   - 命中的行**仍然要读对应规则文件**（正例/反例/为什么）才判得准 —— 正则只说「这行像」
+#   - **未命中也不等于合规**：一部分「检测模式」是从散文里摘的，本来就不完整
+#     （实测那个误判就是这么来的）。所以未命中只作「已经看过」的记录，不是结论。
+#
+# 用法:
+#   scripts/rule-grep <文件...>     # 通常是 git diff --name-only 出来的源码文件
+#   scripts/rule-grep --list        # 只列模式（看能机判多少），不扫
+#
+# 退出码: 0 = 跑完（**不表示有/无命中**）；1 = 用法错误。命中与否看输出。
+
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 规则包位置，优先级：
+#   1. $CODE_REVIEW_RULES_DIR
+#   2. 项目根 .code-review/rules/
+#   3. skill 安装目录内的 references/rules/
+DEFAULT_STD="$HERE/../references/rules"
+STD="${CODE_REVIEW_RULES_DIR:-}"
+if [ -z "$STD" ]; then
+  # 规则属于被审项目；不能从 skill 安装位置推导项目根。
+  PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+  if [ -z "$PROJECT_ROOT" ]; then
+    # 无 Git 的样例目录也可使用项目规则；支持从项目子目录调用。
+    PROJECT_ROOT="$PWD"
+    search_dir="$PWD"
+    while [ -n "$search_dir" ] && [ "$search_dir" != "/" ]; do
+      if [ -d "${search_dir%/}/.code-review/rules" ] || [ -d "${search_dir%/}/docs/work" ]; then
+        PROJECT_ROOT="$search_dir"
+        break
+      fi
+      parent_dir="$(dirname "$search_dir")"
+      [ "$parent_dir" = "$search_dir" ] && break
+      search_dir="$parent_dir"
+    done
+  fi
+  PROJECT_STD="$PROJECT_ROOT/.code-review/rules"
+  if [ -d "$PROJECT_STD" ]; then STD="$PROJECT_STD"; else STD="$DEFAULT_STD"; fi
+fi
+
+[ -d "$STD" ] || { echo "错误: 找不到规则包: $STD" >&2; exit 1; }
+
+LIST_ONLY=0
+if [ "${1:-}" = "--list" ]; then LIST_ONLY=1; shift; fi
+if [ "$LIST_ONLY" -eq 0 ] && [ "$#" -eq 0 ]; then
+  echo "用法: scripts/rule-grep <文件...> | scripts/rule-grep --list" >&2
+  exit 1
+fi
+
+# --- 抽取：`### <ID> [严重级] <标题>` 之后的 `**检测模式**` 块，取**反引号里的片段** ---
+#
+# ⚠️ 不能在 `|` 或 `/` 上切 —— 那些是**正则自己的或**（`Executors.(newFixedThreadPool|...)`），
+#    切了就把它切碎了。反引号才是模式的分界。
+_extract() {
+  local f
+  for f in "$STD"/*.md; do
+    [ -f "$f" ] || continue
+    # index.md 是规则包说明，不是规则本身；里面的示例会污染抽取
+    [ "$(basename "$f")" = "index.md" ] && continue
+    awk -v src="$(basename "$f")" '
+      /^### [A-Za-z]/ {
+        id = ""; sev = ""; title = ""
+        n = split($0, a, " ")
+        id = a[2]
+        if (match($0, /\[[A-Z]+\]/)) sev = substr($0, RSTART + 1, RLENGTH - 2)
+        if (sev != "" && sev != "HIGH" && sev != "MEDIUM" && sev != "LOW") exit 2
+        # 标题 = [严重级] 之后的全部
+        if (match($0, /\] /)) title = substr($0, RSTART + 2)
+        inpat = 0
+        next
+      }
+      /^\*\*检测模式\*\*/ {
+        inpat = 1
+        # ⚠️ **这一行本身也可能带模式** —— 规则库有两种写法，而这里原先直接 `next`：
+        #      块式：  **检测模式**（任一命中即违规）:
+        #                - `pattern`            ← 在**下面**几行
+        #      内联式：**检测模式**: `pattern`   ← 就在**这一行上**
+        #    于是内联式的模式**全部被丢掉**，而且不报错、不计入「不可机判」桶、
+        #    连计数都没有 —— 输出看起来完全正常。
+        line = $0
+        while (match(line, /`[^`]+`/)) {
+          printf "%s\t%s\t%s\t%s\n", src, id, sev, substr(line, RSTART + 1, RLENGTH - 2)
+          line = substr(line, RSTART + RLENGTH)
+        }
+        next
+      }
+      inpat && /^\*\*/ { inpat = 0 }        # 遇到 **正例** / **反例** 就停
+      inpat && /^- / {
+        line = $0
+        while (match(line, /`[^`]+`/)) {
+          printf "%s\t%s\t%s\t%s\n", src, id, sev, substr(line, RSTART + 1, RLENGTH - 2)
+          line = substr(line, RSTART + RLENGTH)
+        }
+      }
+    ' "$f" || return 1
+  done
+}
+
+# 标题另取一次（放 awk 里要跟着 id 传递，单独取更简单）
+_title_of() {
+  awk -v want="$1" '
+    /^### [A-Za-z]/ { n = split($0, a, " "); cur = a[2]
+                      if (match($0, /\] /)) t = substr($0, RSTART + 2)
+                      if (cur == want) { print t; exit } }' "$STD"/*.md 2>/dev/null
+}
+
+PATTERNS="$(_extract)" || { echo "错误: 规则严重级别仅支持 HIGH / MEDIUM / LOW" >&2; exit 1; }
+
+if [ "$LIST_ONLY" -eq 1 ]; then
+  printf '%s\n' "$PATTERNS" | while IFS=$'\t' read -r src id sev pat; do
+    [ -n "$id" ] || continue
+    printf '%-9s %-13s %s\n' "$id" "[$sev]" "$pat"
+  done
+  exit 0
+fi
+
+# --- 跑：可机判的先编译试一遍，编译不过的**必须报出来**，不能静默跳过 ---
+#
+# ⚠️ 还有一类**比编译不过更坏的**：**看着像正则、其实是描述**。
+#    `方法签名中含用户输入参数`、`String.format("%s", ...)`
+#    —— 它们在 ERE 里**全都合法**，于是永远"未命中"，给出**虚假的安心**。
+#    所以两条件单独归一类：**含中文**（那是规则描述）· **含 `...`**（省略号占位）。
+_is_prose() {
+  # ⚠️ 用 here-string，**不要用管道**：`grep -q` 一命中就退出，上游 `printf` 收到
+  #    SIGPIPE（退出 141），而本脚本开了 `pipefail` —— 于是整条管道的状态变成非零，
+  #    `_is_prose` **永远返回假**，散文一条都拦不住。实测踩过。
+  LC_ALL=C grep -q '[^ -~]' <<< "$1"   # 含非 ASCII → 中文描述
+}
+
+# `$` 出现在模式的**中段**（非末尾）→ ERE 把它读成**行尾锚点**，于是该模式
+# **永远不可能命中**。编译得过、跑得动、结果恒为「未命中」—— 读起来就是
+# 「这条看过了、干净」。**虚假的安心**，和上面那类散文同型，但更隐蔽：
+# 散文至少看得出是中文。
+#
+# 例如 `a$b` 想匹配字面 `$`，但未转义时会被当作行尾锚点：
+# `printf 'a$b\n' | grep -E 'a$b'` 不会命中。
+#
+# **只报不改**：规范库是内部标准，改它属于另一件事 —— 这里只负责让它**出声**。
+# 判据保守：只看未转义的 `$`，且排除字符类（`[$]` 里的 `$` 是字面量）。
+_has_inline_anchor() {
+  local p="$1" i=0 c inbr=0
+  # ⚠️ `n` **必须单独一行赋值**。写成一条 `local p="$1" … n="${#p}"` 时，
+  #    `${#p}` 求值的时刻 `p` 还没绑上 → `set -u` 下 **unbound variable**，
+  #    而且它是在 while 循环里被调的 → **整个扫描当场死**，不是跳过一条模式。
+  #    （同型错误本会话已踩过四次：变量必须在**引用处之前**就已经赋值。）
+  local n="${#p}"
+  while [ "$i" -lt "$n" ]; do
+    c="${p:$i:1}"
+    if [ "$c" = '\' ]; then i=$((i + 2)); continue; fi
+    if   [ "$c" = '[' ]; then inbr=1
+    elif [ "$c" = ']' ]; then inbr=0
+    elif [ "$c" = '$' ] && [ "$inbr" -eq 0 ] && [ $((i + 1)) -lt "$n" ]; then return 0
+    fi
+    i=$((i + 1))
+  done
+  return 1
+}
+_hit=0; _ok=0; _bad=0; _prose=0; _miss=""
+while IFS=$'\t' read -r src id sev pat; do
+  [ -n "$id" ] || continue
+  if _is_prose "$pat" || case "$pat" in *...*) true ;; *) false ;; esac; then
+    _prose=$((_prose + 1))
+    printf '  不可机判  %-9s %-13s %s\n      （是**描述**不是模式 —— 仍需人工过）\n' "$id" "[$sev]" "$pat"
+    continue
+  fi
+  grep -qE -- "$pat" /dev/null 2>/dev/null
+  rc=$?
+  if [ "$rc" -eq 2 ]; then          # 2 = 正则本身非法
+    _bad=$((_bad + 1))
+    # ⚠️ 措辞要准：这一桶里**多数不是"写坏了的正则"，而是"片段"** ——
+    #    规则把说明和几段模式写在同一行（`\`for(X : collection)\` 且同 diff 中存在
+    #    \`.add(\` | …`），按反引号切出来的片段单独看就是括号不配对的。
+    #    这类**必须人工过**，而它和「跑过且没命中」是两回事 —— 说成「编译不过」
+    #    会让人以为规则写错了正则，跑去改一个其实没坏的东西。
+    printf '  不可机判  %-9s %-13s %s\n      （**单独不成模式** —— 常见于规则把片段与说明写在同一行。需人工过，不是「跑过且没命中」）\n' \
+      "$id" "[$sev]" "$pat"
+    continue
+  fi
+  # 编译得过 ≠ 能命中。见 `_has_inline_anchor` 的注释：中段 `$` = 行尾锚点 = 恒不命中。
+  if _has_inline_anchor "$pat"; then
+    _bad=$((_bad + 1))
+    printf '  不可机判  %-9s %-13s %s\n      （`$` 在模式**中段** —— ERE 里那是行尾锚点，该模式**永远不可能命中**。要字面量得写 \\$）\n' \
+      "$id" "[$sev]" "$pat"
+    continue
+  fi
+  _ok=$((_ok + 1))
+  out="$(grep -nE -- "$pat" "$@" 2>/dev/null || true)"
+  if [ -n "$out" ]; then
+    _hit=$((_hit + 1))
+    printf '%s\n' "$out" | while IFS= read -r l; do
+      printf '  %s\n      %-9s %-13s %s\n' "$l" "$id" "[$sev]" "$(_title_of "$id")"
+    done
+  else
+    _miss="$_miss$id "
+  fi
+done <<< "$PATTERNS"
+
+echo
+echo "== 覆盖 =="
+echo "可机判 $_ok 条（命中 $_hit 条）· 不可机判 $((_bad + _prose)) 条（散文 $_prose · 编译不过 $_bad）"
+[ -n "$_miss" ] && echo "未命中: $_miss"
+echo
+echo "⚠️ **未命中不等于合规** —— 散文类模式（上面那 $_prose 条）本来就不会命中；"
+echo "   命中也**不等于违规** —— 读对应规则文件（正例/反例）才判得准。"
