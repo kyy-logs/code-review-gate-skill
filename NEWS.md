@@ -11,6 +11,7 @@ and evaluation artifacts out of this file.
 ### Added
 
 - English and Chinese skill packages, with shared runtime scripts and an installer `--lang en|zh-CN` option. English is the default; install one language per project.
+- add canonical review delivery summary
 
 ### Fixed
 
