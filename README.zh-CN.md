@@ -348,10 +348,10 @@ code-review-skill/
 设置 `branch_blocking: true` 后，已测量的分支覆盖率低于 `branch_target` 也会阻塞。
 未测量不按 0% 处理；该开关控制门禁，不额外引入评分扣分。探针、门禁和报告使用相同有效策略。
 `CODE_REVIEW_OUTPUT_DIR` 可覆盖产物根目录；独立 shell 调用须传入同样配置。
-源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、`policy.json`、
+源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、
 根目录的 `workflow-events.log`，以及 archive 命令生成的 scorecard 和 `quality-trend.csv`。
 新审查先执行 `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`；
 同名活动目录、归档或历史事件存在时拒绝创建。同轮重渲染仅更新报告自动区域；不应并发写同一轮。
-记录的 policy.json 是初始化快照；继续同轮时保持配置不变，改变阈值后须重新检查并渲染报告。
+继续同轮时保持配置不变，改变阈值后须重新检查并渲染报告。
 最低 shell 为 Bash 3.2；macOS 可用 `/bin/bash`，Linux / Windows Git Bash 用 `bash`。
 macOS CI 已配置，尚未在本机验证 macOS；CI 通过后才可声称该平台验证通过。

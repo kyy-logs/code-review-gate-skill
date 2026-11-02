@@ -346,11 +346,11 @@ Set `branch_blocking` to `true` to also block when measured branch coverage is b
 Unmeasured coverage is not treated as 0%. The flag controls the gate, not a separate score deduction.
 Probes, gates, and reports use the same effective targets. `CODE_REVIEW_OUTPUT_DIR` overrides the output root;
 pass identical settings to every shell invocation. Source inspection is read-only, but the workflow writes
-`active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, root-level `workflow-events.log`,
+`active/<slug>/code-review.md`, `probes/*.json`, root-level `workflow-events.log`,
 and scorecards / `quality-trend.csv` on archive.
 Start a new review with `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`.
 Existing active, archived, or event-history slugs are rejected. Re-rendering the same run updates only automatic report regions;
-do not run concurrent writers for the same run. policy.json records the initialization snapshot; keep configuration stable when
+do not run concurrent writers for the same run. Keep configuration stable when
 resuming, and re-check findings and re-render after policy changes.
 The minimum shell is Bash 3.2. macOS can use `/bin/bash`; Linux / Windows Git Bash use `bash`.
 A macOS CI job is configured; a passing macOS result has not been established locally.

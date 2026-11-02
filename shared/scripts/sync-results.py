@@ -101,7 +101,6 @@ def init_review(project, configuration, slug):
     content = template.read_text(encoding='utf-8').replace('{line_target}', str(policy['line_target']))
     content = content.replace('{branch_target}', str(policy['branch_target']))
     (directory / 'code-review.md').write_text(content, encoding='utf-8')
-    (directory / 'policy.json').write_text(json.dumps(policy, indent=2), encoding='utf-8')
     print(json.dumps(dict(review_dir=directory.as_posix(), **policy)))
 
 

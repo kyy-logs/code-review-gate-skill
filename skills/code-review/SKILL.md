@@ -73,7 +73,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
    Use a unique slug for a new review; explicitly continuing the same run reuses its directory without init.
    Never dispatch two runs writing the same directory. Pass the actual directory and effective coverage policy to all probes,
    overriding the registry's coverage defaults. Init creates the report template.
-   Source inspection is read-only; the workflow writes reports, probe JSON, policy.json, events, and archive metrics.
+   Source inspection is read-only; the workflow writes reports, probe JSON, events, and archive metrics.
 
 2. **Read the registry and determine the probe list**: Read `references/probes.yaml` and decide by `requires`:
    - Specified but missing / unreadable → `error`

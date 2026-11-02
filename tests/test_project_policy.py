@@ -136,8 +136,10 @@ class ProjectPolicyTests(BehaviorFixture, unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 policy = json.loads(result.stdout)
                 self.assertIs(policy['branch_blocking'], True)
-                snapshot = json.loads((self.root / 'docs/work/active' / package / 'policy.json').read_text())
-                self.assertIs(snapshot['branch_blocking'], True)
+                self.assertEqual(policy['branch_target'], 65)
+                directory = self.root / 'docs/work/active' / package
+                self.assertEqual({path.name for path in directory.iterdir()},
+                                 {'code-review.md', 'probes'})
                 result = run('--review-dir', str(self.review), '--write-report')
                 self.assertEqual(result.returncode, 0, result.stderr)
                 report = (self.review / 'code-review.md').read_text(encoding='utf-8')
