@@ -4,7 +4,7 @@
 
 **基于证据的代码审查：优先静态分析，使用探针分工，并根据结果执行门禁。**
 
-技能源码位于 [`skills/code-review/`](skills/code-review/)，与宿主工具的安装目录分离。当前为 beta 测试版本，版本号见 [VERSION](VERSION)。
+技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前为 beta 测试版本，版本号见 [VERSION](VERSION)。
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -57,7 +57,7 @@
 
 - **三级评级**：`high`、`medium`、`low`。此前四级版本写入的记录，包括包含 `critical` 值的记录，**不兼容**当前版本；`collect-metrics` 会拒绝这些记录。使用前请重新审查，或显式迁移记录。
 - **适用范围**：以静态分析为主，使用四个探针，以及从 JSON 派生的报告和门禁。不能替代测试、CI 或人工审查。
-- **验证情况**：52 项审查流程、NEWS 与安装离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
+- **验证情况**：74 项审查流程、NEWS、安装、双语与结构离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
 
 ## 目录
 
@@ -98,10 +98,14 @@
 **在你的项目目录中**执行：
 
 ```bash
+# 英文（默认）
 npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review --yes
+
+# 中文
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-zh --yes
 ```
 
-Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/code-review/`，Claude Code 安装到 `.claude/skills/code-review/`。需要 Node.js 22.20+。只安装 skill，不再安装独立 reviewer。
+Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skill>/`，Claude Code 安装到 `.claude/skills/<skill>/`。需要 Node.js 22.20+。项目内只安装一种语言。Python 安装器也支持 `--lang en|zh-CN`，默认英文。
 
 ### 运行
 
@@ -114,13 +118,13 @@ Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/code-
 也可以直接调用：
 
 ```text
-/code-review
+/code-review-zh
 ```
 
 审查固定提交区间：
 
 ```text
-使用 code-review 审查提交 abc123..def456
+使用 code-review-zh 审查提交 abc123..def456
 ```
 
 支持两种模式：
@@ -166,6 +170,12 @@ docs/work/active/{slug}/
 
 各探针保持明确职责：`behavior-review` 不负责一般格式检查，`repo-guard` 不承担通用行为缺陷扫描。
 
+### 语言与技术栈覆盖范围
+
+默认 `repo-guard` 流程选择 `.java`、`.ts`、`.tsx`、`.vue` 文件进行模式扫描。内置规则包包含 Java、Spring 专用指导；某种扩展名进入扫描范围，不代表已完整覆盖该语言或框架。
+
+AI 语义检查可以读取这些扩展名之外的相关代码，但结果取决于模型和可用的契约、源码、测试。下方历史案例只验证了特定技术栈和技能快照，不能据此认为所有技术栈都经过同等验证。使用适用的项目规则，并记录尚未核实的依赖或语言特有行为。
+
 ## 证据契约
 
 每条问题包含：
@@ -200,6 +210,10 @@ export CODE_REVIEW_RULES_DIR=/path/to/rules
 - 不负责自动修复，不修改被审代码。
 
 ## 验证情况
+
+离线测试检查 JSON 校验、派生计数、报告一致性、安装和门禁行为。测试通过不能证明缺陷召回率、误报率或 AI finding 的语义正确性。
+
+目前尚未建立与单代理审查的受控对照：在相同案例和模型配置下，同时统计漏报、误报、墙钟时间及 token 用量。下方历史运行仅说明对应快照的观察结果，不能证明相对于该基线有提升。
 
 <details>
 <summary>11 个历史 Java 案例回归（2026-10-29）</summary>
@@ -266,28 +280,33 @@ code-review-skill/
 │   └── code-review-architecture.zh-CN.svg
 ├── .github/workflows/
 │   ├── news-update.yml
+│   ├── skill-validation.yml
 │   ├── star-history.yml
 │   └── sync-news.yml
 ├── scripts/
+│   ├── check-skill-locales.py
 │   ├── install
 │   ├── install.py
 │   ├── install-remote.py
 │   ├── news-update.py
+│   ├── sync-skill-scripts.py
 │   └── sync-news.py
+├── shared/scripts/
+│   ├── collect-metrics
+│   ├── lib-metrics
+│   ├── rule-grep
+│   └── sync-results.py
 ├── skills/
-│   └── code-review/
+│   ├── code-review/
+│   │   ├── SKILL.md
+│   │   ├── assets/
+│   │   ├── references/
+│   │   └── scripts/
+│   └── code-review-zh/
 │       ├── SKILL.md
-│       ├── assets/code-review.md
+│       ├── assets/
 │       ├── references/
-│       │   ├── probes.yaml
-│       │   ├── output-schema.md
-│       │   ├── probes/
-│       │   └── rules/
 │       └── scripts/
-│           ├── collect-metrics
-│           ├── lib-metrics
-│           ├── rule-grep
-│           └── sync-results.py
 └── tests/
 ```
 
@@ -310,3 +329,26 @@ code-review-skill/
 ## 许可证
 
 本仓库使用 [MIT 许可证](LICENSE)。
+
+
+## 项目策略与输出
+
+可选项目配置 `.code-review/config.json`，相对路径按被审项目根目录解析：
+
+```json
+{
+  "output_dir": "docs/work",
+  "line_target": 85,
+  "branch_target": 80
+}
+```
+
+85% / 80% 是可配置默认值；行覆盖率参与阻塞，分支仅提示。探针、门禁和报告使用相同有效阈值。
+`CODE_REVIEW_OUTPUT_DIR` 可覆盖产物根目录；独立 shell 调用须传入同样配置。
+源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、`policy.json`、
+根目录的 `workflow-events.log`，以及 archive 命令生成的 scorecard 和 `quality-trend.csv`。
+新审查先执行 `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`；
+同名活动目录、归档或历史事件存在时拒绝创建。同轮重渲染仅更新报告自动区域；不应并发写同一轮。
+记录的 policy.json 是初始化快照；继续同轮时保持配置不变，改变阈值后须重新检查并渲染报告。
+最低 shell 为 Bash 3.2；macOS 可用 `/bin/bash`，Linux / Windows Git Bash 用 `bash`。
+macOS CI 已配置，尚未在本机验证 macOS；CI 通过后才可声称该平台验证通过。

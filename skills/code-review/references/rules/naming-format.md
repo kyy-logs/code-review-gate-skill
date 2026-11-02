@@ -1,134 +1,142 @@
-# 命名与格式规范
+# Naming and formatting guidelines
 
-## 命名规范
+## Naming conventions
 
-### 基本命名规则
+### Basic naming rules
+**Detection mode**: semantic
 
-| 类型 | 规则ID | 规范 | 示例 | 禁止示例 |
+| Type | Rule ID | Convention | Example | Forbidden example |
 |------|--------|------|------|---------|
-| 类名 | MULT-NAME-003 | UpperCamelCase | `UserDO`, `HtmlUtil`, `OrderService` | `userDo`, `htmlutil` |
-| 方法名 | MULT-NAME-004 | lowerCamelCase | `getUserById()`, `calculateTotal()` | `GetUserById()`, `calculate_total()` |
-| 常量 | MULT-CONST-005 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`, `DEFAULT_TIMEOUT` | `maxRetryCount`, `Max_Retry_Count` |
-| 包名 | MULT-NAME-009 | 全小写单数 | `com.example.user` | `com.example.Users`, `com.example.userMgmt` |
-| 变量 | MULT-NAME-004 | lowerCamelCase | `userName`, `orderList` | `user_name`, `UserName` |
-| 数组 | MULT-NAME-007 | `String[] args` | `String[] args` | `String args[]` |
+| Class name | MULT-NAME-003 | UpperCamelCase | `UserDO`, `HtmlUtil`, `OrderService` | `userDo`, `htmlutil` |
+| Method name | MULT-NAME-004 | lowerCamelCase | `getUserById()`, `calculateTotal()` | `GetUserById()`, `calculate_total()` |
+| Constant | MULT-CONST-005 | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT`, `DEFAULT_TIMEOUT` | `maxRetryCount`, `Max_Retry_Count` |
+| Package name | MULT-NAME-009 | all lowercase, singular | `com.example.user` | `com.example.Users`, `com.example.userMgmt` |
+| Variable | MULT-NAME-004 | lowerCamelCase | `userName`, `orderList` | `user_name`, `UserName` |
+| Array | MULT-NAME-007 | `String[] args` | `String[] args` | `String args[]` |
 
-### 特殊命名规则
+### Special naming rules
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 | 示例 |
+| Rule ID | Rule | Description | Example |
 |--------|------|------|------|
-| MULT-NAME-006 | 抽象类 | Abstract或Base开头 | `AbstractProcessor`, `BaseServiceImpl` |
-| MULT-NAME-006 | 异常类 | Exception结尾 | `UserNotFoundException`, `InvalidParameterException` |
-| MULT-NAME-006 | 测试类 | 被测类名+Test | `UserServiceTest`, `OrderControllerTest` |
-| MULT-NAME-011 | 接口实现 | Impl后缀 | `UserServiceImpl`, `OrderServiceImpl` |
-| MULT-NAME-017 | 领域模型 | DO/DTO/VO/BO后缀 | `UserDO`, `UserDTO`, `UserVO`, `UserBO` |
-| MULT-NAME-013 | 枚举类 | Enum后缀 | `StatusEnum`, `TypeEnum` |
+| MULT-NAME-006 | Abstract class | Must start with Abstract or Base | `AbstractProcessor`, `BaseServiceImpl` |
+| MULT-NAME-006 | Exception class | Must end with Exception | `UserNotFoundException`, `InvalidParameterException` |
+| MULT-NAME-006 | Test class | Name of the class under test + Test | `UserServiceTest`, `OrderControllerTest` |
+| MULT-NAME-011 | Interface implementation | Impl suffix | `UserServiceImpl`, `OrderServiceImpl` |
+| MULT-NAME-017 | Domain model | DO/DTO/VO/BO suffix | `UserDO`, `UserDTO`, `UserVO`, `UserBO` |
+| MULT-NAME-013 | Enum class | Enum suffix | `StatusEnum`, `TypeEnum` |
 
-### 布尔变量命名
+### Boolean variable naming
+**Detection mode**: semantic
 
-**POJO类中布尔属性禁止使用is前缀（MULT-NAME-008）：**
+**Boolean properties in POJOs must not use the is prefix (MULT-NAME-008):**
 
 ```java
-// 错误：会导致序列化问题
+// Wrong: causes serialization problems
 public class User {
-    private Boolean isSuccess;  // 禁止！
-    private boolean isActive;   // 禁止！
+    private Boolean isSuccess;  // Forbidden!
+    private boolean isActive;   // Forbidden!
 }
 
-// 正确
+// Correct
 public class User {
     private Boolean success;
     private boolean active;
     
-    // getter方法可以使用is前缀
+    // getter methods may use the is prefix
     public boolean isSuccess() {
         return success;
     }
 }
 ```
 
-### 方法命名约定
+### Method naming conventions
+**Detection mode**: semantic
 
-| 操作类型 | 规则ID | 命名前缀 | 示例 |
+| Operation | Rule ID | Naming prefix | Example |
 |---------|--------|---------|------|
-| 获取单个 | MULT-NAME-014 | get | `getUserById()`, `getOrderByNo()` |
-| 获取多个 | MULT-NAME-014 | list | `listUsersByStatus()`, `listOrdersByUser()` |
-| 获取统计 | MULT-NAME-014 | count | `countActiveUsers()`, `countOrders()` |
-| 插入 | MULT-NAME-014 | save/insert | `saveUser()`, `insertOrder()` |
-| 删除 | MULT-NAME-014 | remove/delete | `removeUser()`, `deleteOrder()` |
-| 修改 | MULT-NAME-014 | update | `updateUserStatus()`, `updateOrderAmount()` |
-| 判断 | - | is/has/can | `isActive()`, `hasPermission()`, `canDelete()` |
+| Get one | MULT-NAME-014 | get | `getUserById()`, `getOrderByNo()` |
+| Get many | MULT-NAME-014 | list | `listUsersByStatus()`, `listOrdersByUser()` |
+| Get count | MULT-NAME-014 | count | `countActiveUsers()`, `countOrders()` |
+| Insert | MULT-NAME-014 | save/insert | `saveUser()`, `insertOrder()` |
+| Delete | MULT-NAME-014 | remove/delete | `removeUser()`, `deleteOrder()` |
+| Update | MULT-NAME-014 | update | `updateUserStatus()`, `updateOrderAmount()` |
+| Predicate | - | is/has/can | `isActive()`, `hasPermission()`, `canDelete()` |
 
-### 常量规范
+### Constant conventions
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| MULT-CONST-001 | 禁止魔法值 | 不允许未经预定义的常量直接出现 |
-| MULT-CONST-002 | long赋值用大写L | `long amount = 2L` (禁止小写l) |
-| MULT-CONST-003 | 按功能归类常量 | 不要用一个类维护所有常量 |
-| MULT-CONST-004 | 固定范围用enum | 变量值仅在固定范围内变化时用枚举 |
+| MULT-CONST-001 | No magic values | Undefined constants must not appear directly |
+| MULT-CONST-002 | Use uppercase L for long literals | `long amount = 2L` (lowercase l is forbidden) |
+| MULT-CONST-003 | Group constants by function | Do not keep all constants in one class |
+| MULT-CONST-004 | Use enum for fixed ranges | Use an enum when a variable's value changes only within a fixed range |
 
-## 代码格式规范
+## Code formatting conventions
 
-### 缩进与空格
+### Indentation and spacing
+**Detection mode**: semantic
 
-| 规则ID | 规则 | 说明 |
+| Rule ID | Rule | Description |
 |--------|------|------|
-| MULT-FMT-001 | 缩进 | 4个空格，禁止Tab字符 |
-| MULT-FMT-002 | 单行长度 | 不超过120字符 |
-| MULT-FMT-181 | 运算符空格 | 运算符左右各一个空格：`a + b`, `a == b` |
-| MULT-FMT-183 | 逗号空格 | 逗号后一个空格：`func(a, b, c)` |
-| MULT-FMT-181 | 括号空格 | if/for/while与括号间一个空格：`if (condition)` |
-| MULT-FMT-184 | 文件编码 | UTF-8，换行符Unix格式 |
+| MULT-FMT-001 | Indentation | 4 spaces; tab characters are forbidden |
+| MULT-FMT-002 | Line length | No more than 120 characters |
+| MULT-FMT-181 | Operator spacing | One space on each side: `a + b`, `a == b` |
+| MULT-FMT-183 | Comma spacing | One space after a comma: `func(a, b, c)` |
+| MULT-FMT-181 | Parenthesis spacing | One space between if/for/while and the parenthesis: `if (condition)` |
+| MULT-FMT-184 | File encoding | UTF-8, Unix line endings |
 
-### 大括号规则
+### Brace rules
+**Detection mode**: semantic
 
 ```java
-// 正确：左大括号前不换行，后换行
+// Correct: opening brace on the same line, body on the next line
 if (condition) {
     doSomething();
 } else {
     doOther();
 }
 
-// 错误：左大括号前换行
+// Wrong: opening brace on a new line
 if (condition)
 {
     doSomething();
 }
 ```
 
-### 控制语句
+### Control statements
+**Detection mode**: semantic
 
-**所有控制语句必须使用大括号，即使只有一行（MULT-CTRL-133）：**
+**All control statements must use braces, even for a single line (MULT-CTRL-133):**
 
 ```java
-// 错误
+// Wrong
 if (condition) doSomething();
 
-// 正确
+// Correct
 if (condition) {
     doSomething();
 }
 ```
 
-**switch必须有default分支（MULT-CTRL-132）：**
+**switch must have a default branch (MULT-CTRL-132):**
 
 ```java
 switch (status) {
     case Status.ACTIVE:
-        return "激活";
+        return "active";
     case Status.INACTIVE:
-        return "未激活";
+        return "inactive";
     default:
-        return "未知";
+        return "unknown";
 }
 ```
 
-**if-else嵌套不超过3层，超过使用卫语句（MULT-CTRL-134）：**
+**if-else nesting must not exceed 3 levels; use guard clauses beyond that (MULT-CTRL-134):**
 
 ```java
-// 错误：嵌套过深
+// Wrong: nesting too deep
 if (user != null) {
     if (user.isActive()) {
         if (user.hasPermission()) {
@@ -137,7 +145,7 @@ if (user != null) {
     }
 }
 
-// 正确：卫语句
+// Correct: guard clauses
 if (user == null) {
     return;
 }
@@ -147,15 +155,16 @@ if (!user.isActive()) {
 if (!user.hasPermission()) {
     return;
 }
-// 正常逻辑
+// Normal logic
 ```
 
-### 单行方法限制
+### Method length limit
+**Detection mode**: semantic
 
-**单个方法总行数不超过80行（MULT-FMT-186）：**
+**A single method must not exceed 80 lines in total (MULT-FMT-186):**
 
 ```java
-// 正确：方法职责单一，行数可控
+// Correct: single responsibility, manageable length
 public UserDTO convertToDTO(UserDO userDO) {
     if (userDO == null) {
         return null;

@@ -1,47 +1,63 @@
-# probe: behavior-review（行为正确性）
+# probe: behavior-review (behavioral correctness)
 
-**required: true** ｜ **requires: []**
+**required: true** | **requires: []**
 
-检查本次改动引入或触发的行为缺陷。审查范围和源码版本以 `SKILL.md` 的“确定审查范围”为准；
-不依赖规则包，也不受规则扫描的语言扩展名限制。
-按需追踪实际调用链，不受 `impact-analysis` 的一层 fan-in 限制；未找到调用方不能单独证明内部逻辑正确或错误。
+Check behavioral defects introduced or triggered by this change. The review scope and source version follow "Determine the review scope" in `SKILL.md`;
+it does not depend on rule packs and is not limited by the language extensions scanned for rules.
+Trace actual call chains as needed, unconstrained by the single-level fan-in of `impact-analysis`; not finding a caller does not by itself prove the internal logic correct or incorrect.
 
-## 1. 取证方法
+## 1. Evidence-gathering method
 
-先从 diff 定位行为变化，结合第 2 节检查主要路径。需要补读时，先明确待核实的具体问题，再读取直接相关的方法、契约或测试：
+List the changed behavior entry points or branches from the diff (locations and branches, without presuming defects), and organize them into behavior chains by related state or objects. Complete the evidence gathering and judgment below for each chain in turn. Reason through connected branches together and reuse evidence already read; assess different trigger conditions and consequences separately. After finding an issue, continue checking the other changed paths, even when they share a function or root cause with an existing finding.
 
-1. 定位实际调用的完整方法签名，读取对应接口声明及该方法自身的契约；不能用同名重载或相似接口代替。
-2. 沿实际调用链读取相关实现。对决定结论的库或框架调用，核对目标版本的契约或实现，不凭方法名推断返回值和异常。涉及模型或缓存读取时，沿对象获取、创建和包装路径，核对实际返回实现及相关覆写方法；不能仅按接口字段、方法名或默认实现推断行为。
+1. First read the relevant project entry points and implementations to identify the full signatures actually called, existing contracts, and this change; same-name overloads or similar interfaces cannot substitute.
+2. For state changes, locate the relevant direct reads, writes, and wrapper methods (including callbacks) for state fields affected by this change. Connect "state write → guard check → subsequent action", then compare trigger conditions and side effects before and after the change. A getter having no callers or a related implementation being unchanged does not replace checking this chain.
+3. Read additional methods, contracts, or tests along the actual call chain only for specific evidence gaps in the current chain that could change the judgment; state the question before reading more. For library or framework calls that decide the conclusion, verify the target version's interface declaration, method contract, or implementation; do not infer return values and exceptions from method names. When model or cache reads are involved, follow the object acquisition, creation, and wrapping paths to verify the actual returned implementation and relevant overridden methods; do not infer behavior from interface fields, method names, or default implementations alone.
+4. Once this chain has a judgment of "confirmed issue", "ruled out with evidence", or "unverified with a specific gap", move to the next chain. State the basis for exclusions; do not treat an unverified item as ruled out. Revisit a judged chain only when new evidence or a concrete counterexample could change the conclusion, reusing existing evidence.
 
-预期依据可来自接口契约、设计、已有测试或明确的代码不变量，不得自行编造业务规则。
-证据足以确认或排除疑点时停止该路径的追踪；仅在具体证据缺口可能改变判断时继续展开。
+Expected behavior may be based on interface contracts, design, existing tests, or explicit code invariants; do not invent business rules.
 
-## 2. 行为检查
+## 2. Behavioral checks
 
-对本次改动影响的主要路径，结合入口、调用方和上下文检查：
+For the main paths affected by this change, check with the entry points, callers, and context in mind:
 
-- 条件分支是否符合预期，是否存在判断反向或遗漏分支；路由变化时，对照同一输入在变更前后的实际路径，将新路径触发的既有缺陷纳入本轮检查。
-- 状态转换是否允许，副作用是否在正确条件下执行。
-- 空值、空集合和数值边界是否处理正确。
-- 异常或部分失败后，状态与资源是否正确处理。
+- Do conditional branches behave as expected, and are there inverted or missing branches? When routing changes, compare the actual paths for the same input before and after the change, and include pre-existing defects triggered by the new path in this round's checks.
+- Are state transitions allowed, and do side effects run under the correct conditions?
+- Are nulls, empty collections, and numeric boundaries handled correctly?
+- After an exception or partial failure, are state and resources handled correctly?
 
-针对主要行为变更，先从 diff 定位相关处理点，再结合以下检查方向选择具体反例并推演：
+Choose applicable check directions and concrete counterexamples for each behavior chain, and reason through them:
 
-- **解析 / 校验**：先确认输入语言和依赖版本，主动补读相应语法或格式契约，不能只用当前样例代表合法输入。依据契约选择合法的等价写法，沿“解析 → 校验 → 使用”核对结果是否一致，是否绕过校验。
-- **序列化 / 模板渲染**：沿调用链补读实际包装、渲染和解析实现，并对照相关旧入口。沿实际转换顺序追踪变量值，选择引号、反斜杠或换行等相关输入，核对转义、解码是否改变原值或破坏结构。
-- **并发与重复执行**：检查共享状态的读写与发布、检查后执行或读改写的原子性，以及重试、异步完成顺序是否破坏业务约束。对疑点确认实际共享范围和并发执行路径，核对已有同步、事务或幂等保证，并给出导致错误的执行顺序；涉及可见性时说明同步关系。涉及异步任务时，分别追踪完成、异常、取消的收尾路径，区分取消通知与任务实际结束；核对清除 loading/busy 或允许重入时，仍在运行的原任务及子任务是否会破坏业务约束。
+- **Parsing / validation**: first confirm the input language and dependency versions, and proactively read the corresponding syntax or format contract; the current sample alone cannot stand for valid input. Choose valid equivalent forms per the contract, and check consistency along "parse → validate → use" and whether validation can be bypassed.
+- **Serialization / template rendering**: follow the call chain to read the actual wrapping, rendering, and parsing implementations, and compare with the related old entry points. Trace variable values along the actual conversion order, choose inputs such as quotes, backslashes, or newlines, and check whether escaping or decoding changes the original value or breaks the structure.
 
-其他行为变更按主要路径另选反例。
+**Concurrency and async check matrix**: when shared state, retries, or async tasks are involved, select applicable rows from the code signals in this change; a behavior chain may match multiple rows.
 
-## 3. 记录与上报
+| Type and code signal | Interleaving or ordering to examine | Guarantee to verify before ruling the issue out |
+| --- | --- | --- |
+| Check-then-act: inspect a cache, state, or existence before acting | Another actor changes state between the check and action, and the original actor acts on the stale result; this includes access without locks and operations spanning separate critical sections | Check and act or recheck within one critical section, or use an equivalent atomic protocol; individually locked reads and writes do not establish compound atomicity |
+| Read-modify-write: read an old value, compute, then write back | Two actors read the same old value; the later write overwrites the earlier update | A lock, atomic operation, or transaction with the required isolation semantics protects the entire operation |
+| Visibility and publication: initialize objects or update readiness flags across threads | A reader observes readiness but not complete or current data | Effective publication and visibility guarantees connect the actual reads and writes, or the state is confined to one thread |
+| Cancellation and task termination: completion, exception, or cancellation callbacks release busy/loading | The state is released while the original task and subtasks still run, allowing a new task to enter | Separately verify completion, exception, and cancellation cleanup ordering, re-entry guards, and task isolation against the project contract; cancellation notification is not task termination |
+| Stale callbacks: old and new tasks share state or results | A late completion, exception, or cancellation callback from an old task overwrites or clears new task state | Callbacks verify task identity or version, or actual ordering and isolation guarantees prevent the effect |
+| Repeated execution: retries, duplicate messages, or repeated triggers cause side effects | Two executions pass the check and repeat an operation required to happen only once | Atomic claims, deduplication, or idempotency meet the business contract; idempotency must cover state writes and externally observable side effects, and identical computed results alone do not rule out an issue; repetition permitted by the project contract alone is not a finding |
+| Deadlock: multiple locks, or calls to other components or callbacks while holding a lock | Different paths acquire locks in reverse order or wait for each other to finish | Consistent lock ordering, avoiding waits while holding locks, or another actual guarantee prevents the wait cycle |
 
-检查记录统一说明：
-**处理点位置 → 触发条件及具体输入 → 预期行为及依据 → 相关代码路径 → 实际行为与后果**。
+For applicable rows, locate the actual thread, task, or callback entry points and relevant reads, writes, and locks. For operation races, give a concrete interleaving with state changes; for visibility and publication issues, explain the relevant reads and writes and their synchronization and publication guarantees. Exclusions must identify a guarantee that prevents that order or its consequence, not merely say "locked" or "mutually exclusive branches". Record specific evidence gaps under section 1 rather than treating them as exclusions. Do not enumerate every thread combination, force findings, or output the entire matrix; reuse existing evidence and the "actual check scope".
 
-已确认问题写入 finding 的 `evidence`，定级和上报遵循 [输出契约](../output-schema.md)。
-定级前按输出契约“处理契约冲突”核对依据，存在冲突时列明双方。不能仅凭旧实现或注释默认“以测试为准”。判断依赖未消解冲突的，列为未验证项；如保留为 finding，摘要注明“契约待确认”，severity 最高 `medium`。其他有独立充分证据的问题照常定级。
-不同根因或不同后果分别建项，不得把依赖未消解冲突的问题并入独立 high finding 的证据来规避定级；即使不建 finding，也须在报告未验证项中单列。
-语法依据、实际实现链路或合法触发输入的可达性未核实时，注明具体缺口，不得当作已证实缺陷。
-未完成或证据不足的检查列为未验证项及限制，不得笼统记为“已检查”；未运行时标明“静态推演”，不得称为已复现。
+For other behavioral changes, choose counterexamples per the main paths.
 
-行为 finding 不要求已有规则 ID，也不受 `repo-guard` 仅报告 HIGH 级别规则的限制。
+## 3. Recording and reporting
+
+Check records uniformly state:
+**handling point location → trigger conditions and specific input → expected behavior and basis → relevant code path → actual behavior and consequence**.
+
+Once the main paths have these judgments, reuse the records to assemble and write the probe JSON. Do not routinely expand dependencies or recheck judged paths while finishing. If new evidence, a concrete counterexample, or contradictory evidence could change a conclusion, return to the relevant chain for evidence gathering.
+In the return message, use the existing "actual check scope" to briefly state, per path, what was checked, what remains unverified, and the specific gaps, then finish; do not add fields or report sections.
+
+Confirmed issues go into the finding's `evidence`; grading and contract-conflict handling follow the [output contract](../output-schema.md).
+Record different root causes or consequences separately; do not merge them to evade grading. Issues that depend on unresolved contract conflicts must be listed separately as unverified items even when no finding is created.
+When the syntax basis, the actual implementation path, or the reachability of a valid triggering input has not been verified, state the specific gap and do not treat it as a proven defect.
+Checks not completed or with insufficient evidence are listed as unverified items and limitations, not lumped into "checked"; when not run, mark "static reasoning" and do not call it reproduced.
+
+Behavioral findings do not require an existing rule ID and are not subject to `repo-guard`'s HIGH-only reporting limit.

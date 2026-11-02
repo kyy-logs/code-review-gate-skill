@@ -1,63 +1,68 @@
-# 单元测试与工程结构规范
+# Unit testing and project-structure guidelines
 
-## 单元测试规范
+## Unit testing guidelines
 
-### AIR原则
+### AIR principles
+**Detection mode**: semantic
 
-**单元测试必须遵守AIR原则（MULT-GEN-203）：**
+**Unit tests must follow the AIR principles (MULT-GEN-203):**
 
-| 原则 | 说明 |
+| Principle | Description |
 |------|------|
-| A - Automatic | 全自动执行，无需人工干预 |
-| I - Independent | 测试用例之间独立，不能互相调用或依赖 |
-| R - Repeatable | 可重复执行，结果稳定一致 |
+| A - Automatic | Runs fully automatically without human intervention |
+| I - Independent | Test cases are independent; they must not call or depend on each other |
+| R - Repeatable | Repeatable, with stable and consistent results |
 
-### 测试规范
+### Test conventions
+**Detection mode**: semantic
 
 ```java
-// 正确的单元测试（MULT-GEN-204）
+// Correct unit test (MULT-GEN-204)
 @Test
 public void testGetUserById() {
-    // Given: 准备测试数据
+    // Given: prepare test data
     Long userId = 1L;
     User expectedUser = new User(userId, "test");
     when(userDao.findById(userId)).thenReturn(expectedUser);
     
-    // When: 执行被测方法
+    // When: invoke the method under test
     User actualUser = userService.getUserById(userId);
     
-    // Then: 验证结果
+    // Then: verify the result
     assertNotNull(actualUser);
     assertEquals(expectedUser.getName(), actualUser.getName());
 }
 ```
 
-### BCDE原则
+### BCDE principles
+**Detection mode**: semantic
 
-| 原则 | 说明 |
+| Principle | Description |
 |------|------|
-| B - Border | 边界值测试（循环边界、数值边界） |
-| C - Correct | 正确的输入得到预期结果 |
-| D - Design | 与设计文档结合编写测试 |
-| E - Error | 错误输入预期错误输出 |
+| B - Border | Boundary-value testing (loop boundaries, numeric boundaries) |
+| C - Correct | Correct input produces the expected result |
+| D - Design | Write tests together with the design document |
+| E - Error | Erroneous input produces the expected error output |
 
-### 测试覆盖率（MULT-GEN-208）
+### Test coverage (MULT-GEN-208)
+**Detection mode**: semantic
 
-- 语句覆盖率 >= 70%
-- 核心模块语句覆盖率 = 100%
-- 分支覆盖率 >= 80%
+- Statement coverage >= 70%
+- Core-module statement coverage = 100%
+- Branch coverage >= 80%
 
-### 测试禁忌
+### Testing anti-patterns
+**Detection mode**: semantic
 
 ```java
-// 错误：使用System.out验证（MULT-GEN-204）
+// Wrong: verify with System.out (MULT-GEN-204)
 @Test
 public void testBad() {
     User user = userService.getUserById(1L);
-    System.out.println(user.getName());  // 禁止！
+    System.out.println(user.getName());  // Forbidden!
 }
 
-// 正确：使用assert验证
+// Correct: verify with asserts
 @Test
 public void testGood() {
     User user = userService.getUserById(1L);
@@ -65,101 +70,106 @@ public void testGood() {
     assertEquals("expected", user.getName());
 }
 
-// 错误：测试用例互相依赖（MULT-GEN-205）
+// Wrong: test cases depend on each other (MULT-GEN-205)
 @Test
 public void testA() {
-    // 设置静态变量
+    // Set a static variable
     TestContext.value = 1;
 }
 
 @Test
 public void testB() {
-    // 依赖testA的结果
-    assertEquals(1, TestContext.value);  // 禁止！
+    // Depends on testA's result
+    assertEquals(1, TestContext.value);  // Forbidden!
 }
 ```
 
-## 工程结构规范
+## Project structure guidelines
 
-### 应用分层
+### Application layering
+**Detection mode**: semantic
 
-**标准分层架构（MULT-GEN-193）：**
+**Standard layered architecture (MULT-GEN-193):**
 
 ```
-开放接口层 → 终端显示层 → Web层 → Service层 → Manager层 → DAO层
+Open API layer → Client display layer → Web layer → Service layer → Manager layer → DAO layer
 ```
 
-| 层级 | 职责 | 说明 |
+| Layer | Responsibility | Description |
 |------|------|------|
-| 开放接口层 | 封装Service暴露RPC/HTTP接口 | 网关安全控制、流量控制 |
-| 终端显示层 | 模板渲染执行显示 | velocity、JS、JSP、移动端 |
-| Web层 | 访问控制转发、基本参数校验 | 不复用业务简单处理 |
-| Service层 | 具体业务逻辑 | 业务封装、组合调用 |
-| Manager层 | 通用业务处理、第三方预处理 | Service通用能力下沉（缓存、中间件）、多DAO组合复用 |
-| DAO层 | 数据交互 | MySQL、Oracle、Hbase等 |
+| Open API layer | Wraps Service and exposes RPC/HTTP interfaces | Gateway security control, traffic control |
+| Client display layer | Template rendering and display | velocity, JS, JSP, mobile |
+| Web layer | Access control and forwarding, basic parameter validation | No business reuse; keep processing simple |
+| Service layer | Concrete business logic | Business encapsulation, composed calls |
+| Manager layer | Common business processing, third-party preprocessing | Shared Service capabilities (cache, middleware), composition and reuse of multiple DAOs |
+| DAO layer | Data access | MySQL, Oracle, Hbase, etc. |
 
-### 异常处理分层（MULT-GEN-194）
+### Exception handling by layer (MULT-GEN-194)
+**Detection mode**: semantic
 
-| 层级 | 异常处理方式 |
+| Layer | Exception handling |
 |------|-------------|
-| DAO层 | catch → throw DAOException，不打日志 |
-| Service层 | 必须记录日志到磁盘，带参数信息 |
-| Manager层 | 同机如DAO，独立部署如Service |
-| Web层 | 不继续抛，跳转友好错误页面 |
-| 接口层 | 转换为错误码+错误信息 |
+| DAO layer | catch → throw DAOException, no logging |
+| Service layer | Must log to disk with parameter information |
+| Manager layer | Like DAO when co-located; like Service when independently deployed |
+| Web layer | Do not rethrow; redirect to a friendly error page |
+| API layer | Convert to an error code + error message |
 
-### 领域模型规约（MULT-GEN-195）
+### Domain model conventions (MULT-GEN-195)
+**Detection mode**: semantic
 
-| 模型 | 说明 | 使用场景 |
+| Model | Description | Use case |
 |------|------|---------|
-| DO | 数据库表结构对应对象 | DAO层向上传输 |
-| DTO | 数据传输对象 | Service/Manager对外传输 |
-| BO | 业务对象 | Service层业务逻辑封装 |
-| Query | 查询请求对象 | 各层接收查询参数，超2参数禁用Map |
-| VO | 显示层对象 | Web向模板引擎传输 |
+| DO | Object corresponding to a database table | Passed upward by the DAO layer |
+| DTO | Data transfer object | Passed outward by Service/Manager |
+| BO | Business object | Business-logic encapsulation in the Service layer |
+| Query | Query request object | Receives query parameters at each layer; Map is forbidden with more than 2 parameters |
+| VO | Display-layer object | Passed from Web to the template engine |
 
-### 二方库依赖规范（MULT-GEN-196/197/198）
+### Internal library dependency conventions (MULT-GEN-196/197/198)
+**Detection mode**: semantic
 
-**GAV格式规范：**
+**GAV format conventions:**
 
-| 规范 | 说明 | 示例 |
+| Convention | Description | Example |
 |------|------|------|
-| GroupID | com.{公司/BU}.业务线.[子业务线] | `com.example.order` |
-| ArtifactID | 产品线名-模块名 | `passenger-order-api` |
-| Version | 主版本.次版本.修订号 | `1.0.0` |
+| GroupID | com.{company/BU}.business-line.[sub-business-line] | `com.example.order` |
+| ArtifactID | product-line-name-module-name | `passenger-order-api` |
+| Version | major.minor.patch | `1.0.0` |
 
-**版本号规则：**
+**Version numbering rules:**
 
-| 版本类型 | 说明 |
+| Version type | Description |
 |---------|------|
-| 主版本 | 不兼容的API修改 |
-| 次版本 | 向下兼容的功能新增 |
-| 修订号 | 向下兼容的问题修复 |
+| Major version | Incompatible API changes |
+| Minor version | Backward-compatible feature additions |
+| Patch version | Backward-compatible bug fixes |
 
-**依赖规则：**
+**Dependency rules:**
 
 ```xml
-<!-- 错误：依赖SNAPSHOT版本 -->
+<!-- Wrong: depend on a SNAPSHOT version -->
 <dependency>
-    <version>1.0.0-SNAPSHOT</version>  <!-- 禁止！ -->
+    <version>1.0.0-SNAPSHOT</version>  <!-- Forbidden! -->
 </dependency>
 
-<!-- 正确：依赖正式版本 -->
+<!-- Correct: depend on a release version -->
 <dependency>
     <version>1.0.0</version>
 </dependency>
 
-<!-- 正确：统一版本变量 -->
+<!-- Correct: use a shared version variable -->
 <dependency>
     <version>${spring.version}</version>
 </dependency>
 ```
 
-### 设计规约（MULT-GEN-199/200/201/202）
+### Design conventions (MULT-GEN-199/200/201/202)
+**Detection mode**: semantic
 
-| 规则 | 说明 |
+| Rule | Description |
 |------|------|
-| 存储方案评审 | 存储方案和数据结构需评审并沉淀文档 |
-| 状态图表达 | 业务对象状态超过3个用状态图表达 |
-| 单一职责 | 类设计符合单一职责原则 |
-| 组合优于继承 | 优先聚合/组合，谨慎继承 |
+| Storage design review | Storage designs and data structures must be reviewed and documented |
+| State diagrams | Use a state diagram when a business object has more than 3 states |
+| Single responsibility | Class design follows the single-responsibility principle |
+| Composition over inheritance | Prefer aggregation/composition; use inheritance cautiously |

@@ -18,6 +18,31 @@ import yaml
 SEVERITIES = ('high', 'medium', 'low')
 STATUSES = ('open', 'reconciled', 'wontfix', 'false-positive')
 NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*\Z')
+LABELS_PATH = Path(__file__).resolve().parents[1] / 'assets' / 'report-labels.json'
+LABEL_KEYS = frozenset({
+    'coverage_policy', 'language', 'probe_table_header', 'probe_table_separator',
+    'required_yes', 'required_no',
+    'status_passed', 'status_failed', 'status_error', 'status_skipped',
+    'findings_heading', 'finding_id', 'finding_location', 'finding_status',
+    'finding_status_open', 'finding_status_reconciled', 'finding_status_wontfix',
+    'finding_status_false_positive', 'finding_status_suffix', 'finding_evidence', 'finding_reconciled_by',
+    'no_findings', 'reconcile_line', 'gate_prefix', 'gate_blocked', 'gate_clear',
+    'gate_detail', 'gate_footer', 'summary_heading', 'summary_findings',
+    'summary_high_ids', 'summary_medium_ids', 'summary_low_ids',
+    'summary_reconcile', 'summary_required_failed', 'summary_status',
+    'summary_blocked', 'summary_clear', 'summary_none',
+})
+
+
+def load_labels():
+    data = json.loads(LABELS_PATH.read_text(encoding='utf-8-sig'), object_pairs_hook=unique_object)
+    require(isinstance(data, dict), 'report labels must be an object')
+    require(data.get('language') in ('en', 'zh-CN'), 'unsupported report language')
+    missing = LABEL_KEYS - data.keys()
+    require(not missing, 'report labels missing keys: ' + ', '.join(sorted(missing)))
+    for key in LABEL_KEYS:
+        require(isinstance(data[key], str) and data[key].strip(), 'empty report label: ' + key)
+    return data
 
 
 def require(condition, message):
@@ -31,6 +56,49 @@ def unique_object(pairs):
         require(key not in result, f'重复字段: {key}')
         result[key] = value
     return result
+
+
+def runtime_config(project, configuration):
+    """Resolve project policy once for shell commands and probe handoff."""
+    project = Path(project).resolve()
+    path = project / '.code-review/config.json'
+    data = load_record(path) if path.exists() else {}
+    fields(data, (), ('output_dir', 'line_target', 'branch_target'), 'project policy')
+    registry_data = yaml.load(Path(configuration).read_text(encoding='utf-8-sig'), Loader=UniqueLoader)
+    params = next((p.get('params', {}) for p in registry_data['probes']
+                   if p['name'] == 'test-coverage'), {})
+    result = {}
+    for key, default in (('line_target', 85), ('branch_target', 80)):
+        value = data.get(key, params.get(key, default))
+        require(type(value) is int and 0 <= value <= 100, key + ' must be an integer from 0 to 100')
+        result[key] = value
+    output = os.environ.get('CODE_REVIEW_OUTPUT_DIR', data.get('output_dir', 'docs/work'))
+    text(output, 'output_dir')
+    require(not any(c in output for c in '\t\r\n'), 'invalid output_dir')
+    result['output_dir'] = (project / output).resolve().as_posix()
+    require(Path(result['output_dir']) != project, 'output_dir must not be the project root')
+    return result
+
+
+def init_review(project, configuration, slug):
+    require(NAME.fullmatch(slug) is not None and slug not in ('.', '..'), 'invalid slug')
+    policy = runtime_config(project, configuration)
+    root = Path(policy['output_dir'])
+    require(not list((root / 'archive').glob('*/' + slug)), 'slug already archived: ' + slug)
+    events = root / 'workflow-events.log'
+    if events.exists():
+        require(not any(len(row.split('\t')) > 2 and row.split('\t')[2] == slug
+                        for row in events.read_text(encoding='utf-8').splitlines()), 'slug already has events: ' + slug)
+    directory = root / 'active' / slug
+    directory.parent.mkdir(parents=True, exist_ok=True)
+    directory.mkdir()  # Exclusive creation: a new run must never reuse existing output.
+    (directory / 'probes').mkdir()
+    template = LABELS_PATH.parent / 'code-review.md'
+    content = template.read_text(encoding='utf-8').replace('{line_target}', str(policy['line_target']))
+    content = content.replace('{branch_target}', str(policy['branch_target']))
+    (directory / 'code-review.md').write_text(content, encoding='utf-8')
+    (directory / 'policy.json').write_text(json.dumps(policy, indent=2), encoding='utf-8')
+    print(json.dumps(dict(review_dir=directory.as_posix(), **policy)))
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -141,36 +209,38 @@ def markdown(value):
     return value.replace('\r\n', '\n').replace('\r', '\n').replace('\n', '<br>')
 
 
-def render_sections(summary):
-    rows = ['| 探针 | required | 状态 | 耗时（秒） | high | medium | low | 说明 |',
-            '|---|---|---|---|---|---|---|---|']
+def render_sections(summary, labels, policy=None):
+    rows = [labels['probe_table_header'], labels['probe_table_separator']]
     for p in summary['probes']:
-        status = {'passed': '通过', 'failed': '发现阻塞问题', 'error': '执行错误', 'skipped': '跳过'}[p['status']]
+        status = labels['status_' + p['status']]
         rows.append('| ' + ' | '.join(markdown(value) for value in
-                    (p['name'], '是' if p['required'] else '否', status, p['duration'],
-                     p['high'], p['medium'], p['low'], p['reason'])) + ' |')
-    rows += ['', '### 问题详情', '']
+                    (p['name'], labels['required_yes'] if p['required'] else labels['required_no'],
+                     status, p['duration'], p['high'], p['medium'], p['low'], p['reason'])) + ' |')
+    rows += ['', labels['findings_heading'], '']
     for item in summary['findings']:
+        status = labels['finding_status_' + item['status'].replace('-', '_')]
         rows += [f"#### [{item['severity']}] {markdown(item['summary'])}", '',
-                 f"- 问题 ID：{markdown(item['id'])}",
-                 f"- 位置：{markdown(item['location'])}",
-                 f"- 状态：" + {'open': '待处理', 'reconciled': '已处置', 'wontfix': '明确不修', 'false-positive': '误报'}[item['status']] + f"（{item['status']}）",
-                 f"- 原始证据：{markdown(item['evidence'])}"]
+                 labels['finding_id'] + markdown(item['id']),
+                 labels['finding_location'] + markdown(item['location']),
+                 labels['finding_status'] + status + labels['finding_status_suffix'].format(status=item['status']),
+                 labels['finding_evidence'] + markdown(item['evidence'])]
         if item.get('reconciled_by'):
-            rows.append(f"- 处理说明：{markdown(item['reconciled_by'])}")
+            rows.append(labels['finding_reconciled_by'] + markdown(item['reconciled_by']))
         rows.append('')
     if not summary['findings']:
-        rows.append('本轮没有记录 finding。')
+        rows.append(labels['no_findings'])
     r = summary['reconcile']
-    rows += ['', f"reconciliation：total={r['total']} / done={r['done']} / pending={r['pending']}"]
+    rows += ['', labels['reconcile_line'].format(**r)]
     failed = [p['name'] for p in summary['probes'] if p['required'] and p['status'] in ('failed', 'error')]
-    gate = '问题与探针状态：' + ('**阻塞**' if r['pending'] or failed else '**无已记录阻塞项**')
-    gate += f"。待处理严重问题 {r['pending']} 条；required 探针失败或错误 {len(failed)} 个。"
-    gate += '\n\n此结果不代表验收、覆盖率、测试或 CI 等其他条件已全部满足。'
+    gate = labels['gate_prefix'] + (labels['gate_blocked'] if r['pending'] or failed else labels['gate_clear'])
+    gate += labels['gate_detail'].format(pending=r['pending'], failed=len(failed))
+    gate += '\n\n' + labels['gate_footer']
+    if policy is not None:
+        gate += '\n\n' + labels['coverage_policy'].format(**policy)
     return dict(probes='\n'.join(rows).strip(), gate=gate)
 
 
-def summary_text(summary):
+def summary_text(summary, labels):
     """Canonical delivery summary derived only from validated JSON records."""
     findings = summary['findings']
     by_severity = {
@@ -184,15 +254,15 @@ def summary_text(summary):
     reconcile = summary['reconcile']
     blocked = bool(reconcile['pending'] or required_failed)
     lines = [
-        '审查摘要（来自 JSON）',
-        'findings: high={high} medium={medium} low={low}'.format(
+        labels['summary_heading'],
+        labels['summary_findings'].format(
             **{severity: len(by_severity[severity]) for severity in SEVERITIES}),
-        'high_ids: ' + (', '.join(by_severity['high']) or '-'),
-        'medium_ids: ' + (', '.join(by_severity['medium']) or '-'),
-        'low_ids: ' + (', '.join(by_severity['low']) or '-'),
-        'reconcile: total={total} done={done} pending={pending}'.format(**reconcile),
-        'required_failed: ' + (', '.join(required_failed) or 'none'),
-        'status: ' + ('阻塞' if blocked else '无已记录阻塞项'),
+        labels['summary_high_ids'] + (', '.join(by_severity['high']) or '-'),
+        labels['summary_medium_ids'] + (', '.join(by_severity['medium']) or '-'),
+        labels['summary_low_ids'] + (', '.join(by_severity['low']) or '-'),
+        labels['summary_reconcile'].format(**reconcile),
+        labels['summary_required_failed'] + (', '.join(required_failed) or labels['summary_none']),
+        labels['summary_status'] + (labels['summary_blocked'] if blocked else labels['summary_clear']),
     ]
     return '\n'.join(lines)
 
@@ -246,8 +316,11 @@ def main():
     # Native Windows Python otherwise emits CRLF, which would enter Bash metric values.
     sys.stdout.reconfigure(newline='\n')
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--review-dir', type=Path, required=True)
+    parser.add_argument('--review-dir', type=Path)
     parser.add_argument('--registry', type=Path, required=True)
+    parser.add_argument('--project-root', type=Path)
+    parser.add_argument('--runtime-config', action='store_true')
+    parser.add_argument('--init-review')
     parser.add_argument('--probes', action='store_true', help='Validate probe reports without claiming reconciliation')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--events', action='store_true')
@@ -258,10 +331,21 @@ def main():
     output.add_argument('--summary', action='store_true', help='Print the canonical delivery summary from validated JSON')
     args = parser.parse_args()
     try:
+        if args.runtime_config or args.init_review:
+            require(args.project_root is not None, 'project root required')
+            if args.init_review:
+                init_review(args.project_root, args.registry, args.init_review)
+            else:
+                policy = runtime_config(args.project_root, args.registry)
+                print('{output_dir}\t{line_target}\t{branch_target}'.format(**policy))
+            return 0
+        require(args.review_dir is not None, 'review directory required')
+        labels = load_labels()
         summary = summarize(args.review_dir, args.registry, args.probes)
         if args.render or args.write_report or args.check_report:
             require(not args.probes, '渲染和展示校验需要最终同步结果')
-            sections = render_sections(summary)
+            policy = runtime_config(args.project_root, args.registry) if args.project_root else None
+            sections = render_sections(summary, labels, policy)
             if args.write_report or args.check_report:
                 update_report(args.review_dir, sections, check=args.check_report)
         if args.summary:
@@ -278,7 +362,7 @@ def main():
     elif args.has_high:
         print(str(any(p['high'] for p in summary['probes'])).lower())
     elif args.summary:
-        print(summary_text(summary))
+        print(summary_text(summary, labels))
     else:
         print(json.dumps(summary, ensure_ascii=False))
     return 0

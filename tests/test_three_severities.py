@@ -89,7 +89,7 @@ class ThreeSeverityGateTests(BehaviorFixture, unittest.TestCase):
         self.assertIn('medium_ids: behavior-review-2', result.stdout)
         self.assertIn('low_ids: behavior-review-3', result.stdout)
         self.assertIn('reconcile: total=1 done=0 pending=1', result.stdout)
-        self.assertIn('status: 阻塞', result.stdout)
+        self.assertIn('status: blocked', result.stdout)
 
     def test_summary_rejects_tampered_report(self):
         self.add_high()
@@ -99,7 +99,7 @@ class ThreeSeverityGateTests(BehaviorFixture, unittest.TestCase):
             'behavior-review-1', 'behavior-review-9'), encoding='utf-8')
         result = self.command('summary', 'example')
         self.assertNotEqual(result.returncode, 0)
-        self.assertNotIn('审查摘要', result.stdout)
+        self.assertNotIn('Review summary', result.stdout)
 
     def test_summary_zero_findings_is_explicit(self):
         self.render()
@@ -107,7 +107,7 @@ class ThreeSeverityGateTests(BehaviorFixture, unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('findings: high=0 medium=0 low=0', result.stdout)
         self.assertIn('high_ids: -', result.stdout)
-        self.assertIn('status: 无已记录阻塞项', result.stdout)
+        self.assertIn('status: no recorded blockers', result.stdout)
 
     def test_security_metrics_and_scorecard_use_three_levels(self):
         self.render()

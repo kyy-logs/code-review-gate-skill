@@ -1,61 +1,61 @@
-# 代码审查 · {需求标题}
+# Code Review · {Requirement title}
 
 > slug: `{YYYY-MM-DD-kebab-case-topic}`
-> PR: `{PR 链接}`
+> PR: `{PR link}`
 
-## 1. 测试质量与覆盖率
+## 1. Test Quality and Coverage
 
-静态测试质量：检查范围 ____；结论及 finding ____。
+Static test quality: checked scope ____; conclusion and findings ____.
 
-| 指标 | 目标 | 状态 | 实际 | 结论 |
+| Metric | Target | Status | Actual | Conclusion |
 |---|---|---|---|---|
-| 行覆盖率（增量） | 85% | 已测量 / 未测量 / 不适用 | ____ | ____ |
-| 分支覆盖率 | 80% | 已测量 / 未测量 / 不适用 | ____ | ____ |
-| 跳过或弱化的相关测试 | 核实原因及替代验证 | 已检查 / 未验证 | ____ | ____ |
+| Line coverage (incremental) | {line_target}% | Measured / Not measured / Not applicable | ____ | ____ |
+| Branch coverage | {branch_target}% | Measured / Not measured / Not applicable | ____ | ____ |
+| Skipped or weakened related tests | Verify reasons and substitute verification | Checked / Unverified | ____ | ____ |
 
-未测量 / 不适用 / 未验证的原因：____。
+Reasons for not measured / not applicable / unverified: ____.
 
-## 2. 安全 & 性能
+## 2. Security & Performance
 
-检查范围：____；结论：____；关联 finding / 证据：____。
+Checked scope: ____; conclusion: ____; related findings / evidence: ____.
 
-## 3. Lessons 写入清单（如有 lessons 目录）
+## 3. Lessons write-up list (if a lessons directory exists)
 
-写入文件及经验摘要：____（无可记录内容时写“无”）。
+Files written and lesson summary: ____ (write "None" when there is nothing to record).
 
-## 4. 验收条件逐条勾验（vs 验收标准，如有）
+## 4. Acceptance criteria check-off (vs acceptance criteria, if any)
 
-- [ ] 验收 1：
-- [ ] 验收 2：
-- [ ] 验收 3：
+- [ ] Acceptance 1:
+- [ ] Acceptance 2:
+- [ ] Acceptance 3:
 
-## 5. 探针结果
+## 5. Probe Results
 
-审查模式：`worktree` / `commits`，`base=______`（commit ID）
+Review mode: `worktree` / `commits`, `base=______` (commit ID)
 
-审查目标：工作区 / `head=______`（commit ID）
+Review target: working tree / `head=______` (commit ID)
 
-变更文件清单及差异：______（`worktree` 须包含未跟踪新增文件；取证方式见 `SKILL.md` 步骤 1）
+Changed-file list and diff: ______ (`worktree` must include untracked added files; for evidence-gathering see step 1 of `SKILL.md`)
 
-检查范围及补充说明：____。
+Checked scope and additional notes: ____.
 
 <!-- code-review:probes:start -->
-由脚本填入探针汇总及问题详情。
+Filled in by the script with the probe summary and issue details.
 <!-- code-review:probes:end -->
 
-> 跳过、执行失败或证据不足导致未覆盖 / 未验证的内容，须在第 6 节注明；不得将未检查写成检查通过。
+> Anything not covered / not verified due to skips, execution failures, or insufficient evidence must be noted in section 6; do not write unchecked items as passed.
 
-## 6. 结论
+## 6. Conclusion
 
 <!-- code-review:gate:start -->
-由脚本填入已记录的问题和探针阻塞状态。
+Filled in by the script with recorded issues and probe blocking statuses.
 <!-- code-review:gate:end -->
 
-**未覆盖或未验证的内容及原因**：____（如无则写“无”）
+**Content not covered or verified, and why**: ____ (write "None" if none)
 
-测试状态：通过 / 失败 / 未运行 / 未验证；证据：____。
-CI 状态：通过 / 失败 / 未运行 / 未验证；证据：____。
+Test status: passed / failed / not run / unverified; evidence: ____.
+CI status: passed / failed / not run / unverified; evidence: ____.
 
-结论说明及后续建议：____（结合 HARD-GATE，不能推翻上方已记录的阻塞事实）。
+Conclusion notes and follow-up suggestions: ____ (respect the HARD-GATE; must not overturn the blocking facts recorded above).
 
-静态审查通过不代表测试、CI 或其他合入条件已经满足。
+A passing static review does not mean tests, CI, or other merge conditions are met.

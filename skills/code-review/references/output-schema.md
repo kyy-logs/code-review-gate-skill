@@ -1,26 +1,26 @@
-# 探针输出契约（finding）
+# Probe output contract (findings)
 
-本文件统一定义 finding 字段、严重级别、处理状态及探针执行状态，供各探针填写独立 JSON 时使用。
-finding 是一条具体问题；`severity` 表示严重程度，finding 的 `status` 表示处理进度，探针状态表示一轮检查的执行结果。
+This file defines the finding fields, severity levels, handling statuses, and probe execution statuses, for use by probes when they write standalone JSON.
+A finding is one specific problem; `severity` indicates how serious it is, a finding's `status` indicates handling progress, and the probe status indicates the execution result of one round of checks.
 
-## 1. 单条问题怎么写
+## 1. How to write a single issue
 
-| 字段 | 填写要求 | 取值 | 说明 |
+| Field | Requirement | Value | Description |
 |---|---|---|---|
-| `id` | 必填 | `<probe>-<序号>` | 全局唯一，序号从 1 开始，**必须稳定** |
-| `probe` | 必填 | 探针名 | 探针名取自 `references/probes.yaml` |
-| `severity` | 必填 | `high` / `medium` / `low` | 见下方判定表 |
-| `status` | 必填 | `open` / `reconciled` / `wontfix` / `false-positive` | 见下方状态机 |
-| `location` | 必填 | `path:line` | 定位不到行时写到文件级，并说明原因 |
-| `summary` | 必填 | 一句话 | 说**是什么问题**，不是「建议优化」这类空话 |
-| `evidence` | 必填 | 具体依据 | 引用规则 ID / 接口契约 / 代码路径 / 测试输出。**没有依据的不算 finding** |
-| `repro` | 选填 | 复核命令 | 如 `grep -n 'formatCents' src/…/Calculator.java`、`git show <head>:<path>`。仅限读取证据的命令，不得构建或运行测试 |
-| `reconciled_by` | 条件必填 | 处理说明 | `status=reconciled` 时填写：改在哪、为什么这样改 |
-| `reconcile_commit` | 选填 | commit id | 有对应处理提交时填写 |
+| `id` | Required | `<probe>-<number>` | Globally unique, number starts at 1, **must be stable** |
+| `probe` | Required | Probe name | Probe name taken from `references/probes.yaml` |
+| `severity` | Required | `high` / `medium` / `low` | See the criteria table below |
+| `status` | Required | `open` / `reconciled` / `wontfix` / `false-positive` | See the state machine below |
+| `location` | Required | `path:line` | When no line can be located, use the file level and explain why |
+| `summary` | Required | One sentence | Say **what the problem is**, not empty phrases like "consider optimizing" |
+| `evidence` | Required | Concrete basis | Cite a rule ID / interface contract / code path / test output. **Anything without evidence is not a finding** |
+| `repro` | Optional | Verification command | E.g. `grep -n 'formatCents' src/…/Calculator.java`, `git show <head>:<path>`. Read-only evidence commands only; must not build or run tests |
+| `reconciled_by` | Conditionally required | Handling note | Fill in when `status=reconciled`: where it was changed and why |
+| `reconcile_commit` | Optional | commit id | Fill in when a corresponding handling commit exists |
 
-未提供的选填字段及不适用的条件字段可以省略，不必填写空字段。
+Optional fields not provided and conditional fields that do not apply may be omitted; empty fields need not be filled.
 
-每个探针将本轮记录保存为独立的 `probes/<探针名>.json`。例如：
+Each probe saves this round's records as a standalone `probes/<probe-name>.json`. For example:
 
 ```json
 {
@@ -33,80 +33,82 @@ finding 是一条具体问题；`severity` 表示严重程度，finding 的 `sta
     "severity": "high",
     "status": "open",
     "location": "src/main/java/com/example/Calculator.java:137",
-    "summary": "增量行覆盖率 60%，低于 85% 基线",
-    "evidence": "报告与目标版本一致；5 行改动可执行生产代码中覆盖 3 行，3/5 = 60%"
+    "summary": "Incremental line coverage is 60%, below the 85% baseline",
+    "evidence": "Report matches the target version; 3 of 5 executable changed lines in production code are covered, 3/5 = 60%"
   }]
 }
 ```
 
-`probe`、`status`、`findings` 必填；`duration` 为非负整数秒，可省略，省略记 0。
-`skipped` / `error` 须另填非空 `reason`；无问题时显式写 `findings: []`，不虚构空记录。
-检查范围、限制和修复建议写入人类报告，机器 JSON 是唯一事实来源，不另抄完整 finding 或手填计数。
+`probe`, `status`, and `findings` are required; `duration` is a non-negative integer in seconds and may be omitted, with omission recorded as 0.
+`skipped` / `error` must also include a non-empty `reason`; when there are no issues, explicitly write `findings: []` rather than inventing empty records.
+Checked scope, limitations, and fix suggestions go in the human report; the machine JSON is the single source of truth, so do not copy full findings or hand-fill counts elsewhere.
 
-## 2. 问题严重程度（severity 判定）
+## 2. Issue severity
 
-| 级别 | 判据 | 是否进 reconciliation |
+| Level | Criterion | Enters reconciliation |
 |---|---|---|
-| `high` | 严重安全规则违规 / 资金或数据正确性问题 / 规范 HIGH 规则违规 / 契约破坏 / 已测量的 diff 行覆盖率低于 85% / 验收项不通过 | **是** |
-| `medium` | 可维护性问题、缺测试 | 否（记录即可） |
-| `low` | 风格、命名 | 否 |
+| `high` | Serious security rule violation / money or data correctness issue / HIGH-severity standards rule violation / contract break / measured diff line coverage below the effective project target (default 85%) / acceptance item failing | **Yes** |
+| `medium` | Confirmed behavioral defects that deviate from expected behavior, have localized impact, and do not meet the high criteria; maintainability issues, missing tests | No (record only) |
+| `low` | Style, naming | No |
 
-只接受上述三档；其他级别报错，不自动转换或改写历史记录。
+Only the three levels above are accepted; other levels are an error and are not auto-converted or used to rewrite historical records.
 
 
-### 行为类问题
+### Behavioral issues
 
-**1. 核对依据**
+**1. Verify the basis**
 
-以违反方法契约为由报 `high`，`evidence` 必须包含实际方法的完整签名、对应接口声明（无接口则方法声明）的文件及行号、契约原文短摘。同名重载或相似接口不能代替。
-确认无文字契约时，可引用具体代码不变量或测试及位置；不能把未读取视为不存在。
-依据未核对或未列出时，最高 `medium`，注明“契约未核对”。
+To report `high` on the grounds of violating a method contract, `evidence` must include the full signature of the actual method, the file and line number of the corresponding interface declaration (or the method declaration if there is no interface), and a short excerpt of the contract text. Same-name overloads or similar interfaces cannot substitute.
+When there is confirmed to be no textual contract, you may cite specific code invariants or tests and their locations; not having read something cannot be treated as it not existing.
+When the basis has not been verified or listed, the maximum is `medium`, noting "contract not verified".
 
-**2. 按已证实的错误定级**
+**2. Grade by proven errors**
 
-- `high`：可达输入下，API / SPI / 缓存 / 状态机等公共契约边界已出现错误返回、异常或漏失效。源码推演可作证据，不要求端到端运行。
-- 最高 `medium`：边界错误尚未证实，仅推测下游可能受影响；或性能问题未测量。
+- `high`: at public contract boundaries such as API / SPI / cache / state machine, an incorrect return, exception, or missed invalidation occurs under reachable inputs. Source-code reasoning may serve as evidence; end-to-end execution is not required.
+- Maximum `medium`: the boundary error is not yet proven and downstream impact is only speculated; or the performance issue is unmeasured.
 
-边界错误已证实时，下游 UI / 模板 / 集成层未验证只记入 `evidence`，不因此降级。
+Do not omit a proven behavioral defect solely because performance is unmeasured or downstream effects are unverified.
 
-**3. 处理契约冲突**
+When a boundary error is proven, unverified downstream UI / templates / integration layers are recorded only in `evidence` and do not lower the severity.
 
-契约、文档或测试存在冲突时，在 `evidence` 列明双方依据。只有适用于目标版本、能解释冲突的证据才能消解冲突；“疑似笔误 / 复制粘贴 / 旧注释”不算证据。
-判断依赖未解决冲突的，记为未验证项；如保留为 finding，最高 `medium`，摘要注明“契约待确认”。其他有独立充分证据的问题照常定级。
-`unverified` 不是 finding 的 severity 或 status。
+**3. Handling contract conflicts**
 
-### 组合风险与测试缺口
+When contracts, docs, or tests conflict, list both sides' bases in `evidence`. Only evidence that applies to the target version and explains the conflict can resolve it; "probably a typo / copy-paste / old comment" does not count as evidence.
+If the judgment depends on an unresolved conflict, record it as an unverified item; if kept as a finding, the maximum is `medium`, and the summary notes "contract to be confirmed". Other issues with independent, sufficient evidence are graded as usual.
+`unverified` is not a finding severity or status.
 
-- **组合风险**：多个不同问题相互作用，且有证据证明共同造成更严重后果时，
-  按组合后的影响定级，并说明相互作用路径。
-- **契约变更与测试缺口**：确认缺少对应测试时，记录测试缺口，不自动升级为 `high`。
-  已有证据证明契约变更造成破坏性影响时，按上方 severity 判据定级。
-  测试上下文未提供或不完整时，注明“相关测试未验证”，不得据此断言没有测试。
+### Combined risk and test gaps
 
-## 3. 问题处理状态
+- **Combined risk**: when multiple distinct issues interact and evidence proves they jointly cause a more serious consequence,
+  grade by the combined impact and explain the interaction path.
+- **Contract changes and test gaps**: when a corresponding test is confirmed missing, record the test gap; do not automatically escalate it to `high`.
+  When evidence already proves that a contract change causes a breaking impact, grade per the severity criteria above.
+  When test context is not provided or is incomplete, note "relevant tests unverified", and do not assert that no tests exist on that basis.
+
+## 3. Issue handling statuses
 
 ```
-open ──┬─→ reconciled      已处理（改了代码 / 补了测试）
-       ├─→ wontfix         明确不修（**必须写理由**，且 severity 必须是 medium/low）
-       └─→ false-positive  探针误报（**必须写证据**说明为什么不是问题）
+open ──┬─→ reconciled      Handled (code changed / tests added)
+       ├─→ wontfix         Explicitly not fixing (**must give a reason**, and severity must be medium/low)
+       └─→ false-positive  Probe false positive (**must give evidence** explaining why it is not a problem)
 ```
 
-### 处置后的重跑
+### Re-running after handling
 
-high finding 处置后，重新执行对应探针并上报结果，不得直接手工改为 `passed`。
-重跑须说明代码或判断依据的变化；执行状态以最新结果为准，历史 finding 及处理记录保留。
+After a high finding is handled, re-run the corresponding probe and report the result; do not directly hand-edit it to `passed`.
+The re-run must state what changed in the code or the basis for judgment; execution status follows the latest result, and historical findings and handling records are retained.
 
-## 4. 探针执行结果
+## 4. Probe execution results
 
-`requires` 列出探针所需输入，按本轮提供的材料及默认配置检查。
-探针执行状态单独上报，与单条 finding 的处理状态区分：
+`requires` lists the inputs a probe needs, checked against this round's provided materials and default configuration.
+Probe execution status is reported separately from the handling status of individual findings:
 
-| 状态 | 含义 |
+| Status | Meaning |
 |---|---|
-| `passed` | 相关检查已完成，且无执行错误、无 open high |
-| `failed` | 相关检查已完成，无执行错误但发现 open high |
-| `skipped` | **按探针约定正常跳过**，例如本轮未提供 `requires` 所需的可选输入；必须写明原因。**不算失败** |
-| `error` | 已指定输入的路径不存在、无法读取或解析，或命令 / 工具执行失败。仅 `required=true` 时，与 `failed` 一样计入 `PROBE_REQUIRED_FAILED` |
+| `passed` | The relevant checks completed with no execution errors and no open high findings |
+| `failed` | The relevant checks completed with no execution errors but open high findings |
+| `skipped` | **Normally skipped per the probe's convention**, e.g. this round did not provide the optional input required by `requires`; the reason must be stated. **Not counted as a failure** |
+| `error` | A specified input path does not exist, cannot be read or parsed, or a command / tool failed. Only when `required=true` does it count toward `PROBE_REQUIRED_FAILED`, same as `failed` |
 
-已指定的覆盖率报告路径读不到时，应记为 `error`。
-默认配置指向的资源缺失或损坏同样属于 `error`，不得伪装成正常跳过。
+When a specified coverage report path cannot be read, record it as `error`.
+Missing or corrupted resources pointed to by the default configuration likewise count as `error` and must not be disguised as a normal skip.

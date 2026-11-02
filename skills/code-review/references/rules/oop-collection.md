@@ -1,27 +1,28 @@
-# OOP 与集合处理规范
+# OOP and collection guidelines
 
-## 核心原则
+## Core principles
 
-### 不可变性原则
+### Immutability principle
+**Detection mode**: semantic
 
-**优先使用不可变数据结构和无副作用操作：**
+**Prefer immutable data structures and side-effect-free operations:**
 
 ```java
-// 错误：可变操作
+// Wrong: mutable operation
 public List<User> processUsers(List<User> users) {
     List<User> results = new ArrayList<>();
     for (User user : users) {
-        user.setVerified(true);  // 修改原对象！
+        user.setVerified(true);  // Modifies the original object!
         results.add(user);
     }
     return results;
 }
 
-// 正确：不可变操作（创建新对象）
+// Correct: immutable operation (create new objects)
 public List<User> processUsers(List<User> users) {
     return users.stream()
         .map(u -> {
-            User copy = new User(u);  // 创建副本
+            User copy = new User(u);  // Create a copy
             copy.setVerified(true);
             return copy;
         })
@@ -29,17 +30,18 @@ public List<User> processUsers(List<User> users) {
 }
 ```
 
-### 防御性编程原则
+### Defensive programming principle
+**Detection mode**: semantic
 
-**所有可能为null的地方都必须进行null检查：**
+**Every place that may be null must be null-checked:**
 
 ```java
-// 错误：可能NPE
+// Wrong: may throw NPE
 public String getUserName(User user) {
     return user.getName().toUpperCase();
 }
 
-// 正确：使用Optional
+// Correct: use Optional
 public String getUserName(User user) {
     return Optional.ofNullable(user)
         .map(User::getName)
@@ -47,20 +49,21 @@ public String getUserName(User user) {
         .orElse("");
 }
 
-// 或使用Objects.equals（推荐用于比较）
+// Or use Objects.equals (recommended for comparisons)
 public boolean isEqual(User u1, User u2) {
     return Objects.equals(u1, u2);
 }
 ```
 
-## OOP 规范
+## OOP conventions
 
-### 覆写方法
+### Overridden methods
+**Detection mode**: semantic
 
-**所有覆写方法必须加@Override注解（MULT-OOP-001）：**
+**All overridden methods must have the @Override annotation (MULT-OOP-001):**
 
 ```java
-// 正确
+// Correct
 @Override
 public boolean equals(Object obj) {
     // ...
@@ -72,51 +75,53 @@ public String toString() {
 }
 ```
 
-### 对象比较
+### Object comparison
+**Detection mode**: semantic
 
-**包装类对象比较必须使用equals（MULT-OOP-003）：**
+**Wrapper objects must be compared with equals (MULT-OOP-003):**
 
 ```java
-// 错误：可能比较引用
+// Wrong: may compare references
 Integer a = 128;
 Integer b = 128;
 if (a == b) { }  // false!
 
-// 正确
+// Correct
 if (a.equals(b)) { }
 
-// 更安全：使用Objects.equals（推荐）
+// Safer: use Objects.equals (recommended)
 if (Objects.equals(a, b)) { }
 ```
 
-**equals用常量或确定有值的对象调用（MULT-OOP-002）：**
+**Call equals on a constant or an object known to be non-null (MULT-OOP-002):**
 
 ```java
-// 错误：可能NPE
+// Wrong: may throw NPE
 if (user.getName().equals("admin")) { }
 
-// 正确
+// Correct
 if ("admin".equals(user.getName())) { }
 
-// 或使用Objects.equals
+// Or use Objects.equals
 if (Objects.equals("admin", user.getName())) { }
 ```
 
-### POJO类规范
+### POJO conventions
+**Detection mode**: semantic
 
 ```java
-// 正确的POJO类定义
+// Correct POJO class definition
 public class UserDTO {
-    // 使用包装类型（MULT-OOP-004）
+    // Use wrapper types (MULT-OOP-004)
     private Long id;
     private String name;
     private Integer age;
-    private Boolean active;  // 不用is前缀（MULT-NAME-008）
+    private Boolean active;  // Do not use the is prefix (MULT-NAME-008)
     
-    // 不要设置默认值（MULT-OOP-006）
-    // private Integer status = 0;  // 禁止
+    // Do not set default values (MULT-OOP-006)
+    // private Integer status = 0;  // Forbidden
     
-    // 必须有toString方法（MULT-OOP-011）
+    // Must have a toString method (MULT-OOP-011)
     @Override
     public String toString() {
         return "UserDTO{id=" + id + ", name='" + name + "'}";
@@ -124,12 +129,13 @@ public class UserDTO {
 }
 ```
 
-### 访问控制
+### Access control
+**Detection mode**: semantic
 
-**从严原则：private > protected > default > public（MULT-OOP-121）：**
+**Use the most restrictive access level: private > protected > default > public (MULT-OOP-121):**
 
 ```java
-// 工具类禁止public构造方法
+// Utility classes must not have public constructors
 public class StringUtils {
     private StringUtils() {
         throw new UnsupportedOperationException("Utility class");
@@ -141,29 +147,31 @@ public class StringUtils {
 }
 ```
 
-### 序列化规范
+### Serialization conventions
+**Detection mode**: semantic
 
-**序列化类新增属性时不要修改serialVersionUID（MULT-OOP-007）：**
+**Do not change serialVersionUID when adding fields to a serializable class (MULT-OOP-007):**
 
 ```java
-// 正确
+// Correct
 private static final long serialVersionUID = 1L;
 ```
 
-### 构造方法规范
+### Constructor conventions
+**Detection mode**: semantic
 
-**构造方法禁止业务逻辑，初始化放init方法（MULT-OOP-008）：**
+**Constructors must not contain business logic; put initialization in an init method (MULT-OOP-008):**
 
 ```java
-// 错误：构造方法包含业务逻辑
+// Wrong: constructor contains business logic
 public UserService() {
-    loadConfig();  // 禁止
-    initCache();  // 禁止
+    loadConfig();  // Forbidden
+    initCache();  // Forbidden
 }
 
-// 正确
+// Correct
 public UserService() {
-    // 仅初始化必要属性
+    // Initialize only necessary properties
 }
 
 @PostConstruct
@@ -173,27 +181,29 @@ public void init() {
 }
 ```
 
-## 集合处理规范
+## Collection guidelines
 
-### 集合初始化
+### Collection initialization
+**Detection mode**: semantic
 
-**指定初始容量避免扩容（MULT-COLL-130）：**
+**Specify the initial capacity to avoid resizing (MULT-COLL-130):**
 
 ```java
-// 正确
+// Correct
 List<String> list = new ArrayList<>(expectedSize);
 Map<String, Object> map = new HashMap<>(expectedSize);
 
-// 计算公式
+// Calculation formula
 int initialCapacity = (int) (expectedSize / 0.75) + 1;
 ```
 
 ### equals/hashCode
+**Detection mode**: semantic
 
-**重写equals必须重写hashCode（MULT-COLL-122）：**
+**Overriding equals requires overriding hashCode (MULT-COLL-122):**
 
 ```java
-// 正确
+// Correct
 @Override
 public boolean equals(Object o) {
     if (this == o) return true;
@@ -208,19 +218,20 @@ public int hashCode() {
 }
 ```
 
-### 集合遍历
+### Collection iteration
+**Detection mode**: semantic
 
-**禁止在foreach中remove/add（MULT-COLL-123）：**
+**Do not remove/add inside foreach (MULT-COLL-123):**
 
 ```java
-// 错误：ConcurrentModificationException
+// Wrong: ConcurrentModificationException
 for (String item : list) {
     if (condition) {
-        list.remove(item);  // 禁止！
+        list.remove(item);  // Forbidden!
     }
 }
 
-// 正确：使用Iterator
+// Correct: use Iterator
 Iterator<String> iter = list.iterator();
 while (iter.hasNext()) {
     String item = iter.next();
@@ -229,86 +240,92 @@ while (iter.hasNext()) {
     }
 }
 
-// 或使用removeIf（Java 8+）推荐
+// Or use removeIf (Java 8+), recommended
 list.removeIf(item -> condition);
 ```
 
 ### Arrays.asList
+**Detection mode**: semantic
 
-**Arrays.asList()返回的集合禁止add/remove/clear（MULT-COLL-125）：**
+**The collection returned by Arrays.asList() must not be add/remove/clear'd (MULT-COLL-125):**
 
 ```java
-// 错误
+// Wrong
 List<String> list = Arrays.asList("a", "b");
-list.add("c");  // 抛出UnsupportedOperationException
+list.add("c");  // throws UnsupportedOperationException
 
-// 正确：创建新数组
+// Correct: create a new list
 List<String> list = new ArrayList<>(Arrays.asList("a", "b"));
 list.add("c");
 ```
 
-### subList注意事项
+### subList caveats
+**Detection mode**: semantic
 
-**subList是原集合视图，修改原集合导致ConcurrentModificationException（MULT-COLL-126）：**
+**subList is a view of the original collection; modifying the original causes ConcurrentModificationException (MULT-COLL-126):**
 
 ```java
-// 错误
+// Wrong
 List<String> list = new ArrayList<>(Arrays.asList("a", "b", "c"));
 List<String> sub = list.subList(0, 2);
-list.add("d");  // 导致sub迭代异常
+list.add("d");  // causes sub iteration to fail
 
-// 正确：创建独立副本
+// Correct: create an independent copy
 List<String> sub = new ArrayList<>(list.subList(0, 2));
 ```
 
-### 集合转数组
+### Collection to array
+**Detection mode**: semantic
 
 ```java
-// 错误
-String[] arr = list.toArray();  // 返回Object[]
+// Wrong
+String[] arr = list.toArray();  // returns Object[]
 
-// 正确
+// Correct
 String[] arr = list.toArray(new String[0]);
 ```
 
-### Map遍历
+### Map iteration
+**Detection mode**: semantic
 
 ```java
-// 推荐：使用entrySet（MULT-COLL-131）
+// Recommended: use entrySet (MULT-COLL-131)
 for (Map.Entry<String, Object> entry : map.entrySet()) {
     String key = entry.getKey();
     Object value = entry.getValue();
 }
 
-// Java 8+：使用forEach
+// Java 8+: use forEach
 map.forEach((key, value) -> {
     // ...
 });
 ```
 
-### 集合判空
+### Empty collection checks
+**Detection mode**: semantic
 
 ```java
-// 错误
+// Wrong
 if (list.size() == 0) { }
 
-// 正确
+// Correct
 if (list.isEmpty()) { }
 
-// 安全判空（推荐）
+// Safe empty check (recommended)
 if (CollectionUtils.isEmpty(list)) { }
 ```
 
 ### ConcurrentHashMap
+**Detection mode**: semantic
 
-**ConcurrentHashMap K/V均不允许null（MULT-COLL-129）：**
+**ConcurrentHashMap does not allow null keys or values (MULT-COLL-129):**
 
 ```java
-// 错误
+// Wrong
 ConcurrentHashMap<String, Object> map = new ConcurrentHashMap<>();
-map.put("key", null);  // 禁止
+map.put("key", null);  // Forbidden
 
-// 正确：使用HashMap（允许null）
+// Correct: use HashMap (nulls allowed)
 Map<String, Object> map = new HashMap<>();
 map.put("key", null);
 ```

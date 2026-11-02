@@ -10,7 +10,21 @@ and evaluation artifacts out of this file.
 
 ### Added
 
+- add English skill package and locale checks
+- add installer language selection
+- localize report labels and rule extraction
+- add shared scripts and bilingual skill package
 - add canonical review delivery summary
+
+### Fixed
+
+- probes: share evidence and coverage handoff boundaries
+- output-schema: classify confirmed behavioral defects as medium
+- behavior-review: add concurrency and async check matrix
+- make review runtime portable and project configurable
+- render false-positive finding status
+- preserve localized finding status punctuation
+- finish English rule documentation
 
 <!-- UNRELEASED:END -->
 

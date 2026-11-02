@@ -5,6 +5,7 @@
 # code-review 的计数由 sync-results.py 从报告派生；其他指标仍由调用方提供。
 # 本脚本记录事件日志，并在 archive 时渲染 scorecard 与趋势 CSV。
 set -euo pipefail
+[ "${BASH_VERSINFO[0]}" -gt 3 ] || { [ "${BASH_VERSINFO[0]}" -eq 3 ] && [ "${BASH_VERSINFO[1]}" -ge 2 ]; } || { echo "Bash 3.2+ required" >&2; exit 1; }
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib-metrics
@@ -15,6 +16,8 @@ usage() {
 用法: scripts/collect-metrics <子命令> <slug> [选项]
 
 子命令:
+  init <slug>
+      Exclusively create a new run; return its directory and effective policy
   deviation <slug> --count N --reasonable M
       偏离总数与其中合理的条数
   security  <slug> --high N --medium M --low L
@@ -40,9 +43,10 @@ usage() {
       记录一次回滚（无自动埋点，供人工补录）
 
 说明:
-  事件日志: docs/work/workflow-events.log
-  scorecard: docs/work/active/<slug>/quality-scorecard.txt
-  趋势:     docs/work/quality-trend.csv
+  输出根: 项目 output_dir / CODE_REVIEW_OUTPUT_DIR（默认 docs/work）
+  事件日志: <output_root>/workflow-events.log
+  scorecard: <output_root>/active/<slug>/quality-scorecard.txt
+  趋势:     <output_root>/quality-trend.csv
 EOF
 }
 
@@ -53,11 +57,11 @@ sync_review_results() {
   validate_slug "$slug"
   directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
   skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
-  local args=(--review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --events)
+  local args=(--project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --events)
   [ "$phase" != probes ] || args+=(--probes)
   rows="$("${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" "${args[@]}")" || return 1
-  printf -v ts '%(%s)T' -1
-  iso="$(date -Iseconds)"
+  event_time
+  ts="$EVENT_TS"; iso="$EVENT_ISO"
   printf -v batch '%s\t%s\t%s\t-\t-\treview-sync\tphase\t%s\n' "$ts" "$iso" "$slug" "$phase"
   SYNC_TOTAL=0; SYNC_DONE=0
   while IFS=$'\t' read -r node event key value; do
@@ -97,7 +101,7 @@ review_report() {
   directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
   skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
   "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
-    --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" "$action"
+    --project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" "$action"
 }
 
 summary_report() {
@@ -106,7 +110,7 @@ summary_report() {
   directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
   skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
   "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
-    --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --summary
+    --project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --summary
 }
 
 # 校验非负整数。空串在这里一律拒绝 —— 「没传」与「传了 0」必须区分开，
@@ -157,6 +161,12 @@ ${2:-}"
 CMD="$1"; shift || true
 
 case "$CMD" in
+  init)
+    [ "$#" -eq 1 ] || die "init requires one new slug"
+    "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
+      --registry "${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}/references/probes.yaml" \
+      --project-root "$WF_ROOT" --init-review "$1"
+    ;;
   -h|--help|help)
     usage; exit 0 ;;
 

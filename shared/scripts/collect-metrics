@@ -1,0 +1,336 @@
+#!/usr/bin/env bash
+# code-review skill 质量指标采集（随 skill 安装）
+# 由 code-review 的探针与主会话调用。
+#
+# code-review 的计数由 sync-results.py 从报告派生；其他指标仍由调用方提供。
+# 本脚本记录事件日志，并在 archive 时渲染 scorecard 与趋势 CSV。
+set -euo pipefail
+[ "${BASH_VERSINFO[0]}" -gt 3 ] || { [ "${BASH_VERSINFO[0]}" -eq 3 ] && [ "${BASH_VERSINFO[1]}" -ge 2 ]; } || { echo "Bash 3.2+ required" >&2; exit 1; }
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib-metrics
+. "$SCRIPT_DIR/lib-metrics"
+
+usage() {
+  cat <<'EOF'
+用法: scripts/collect-metrics <子命令> <slug> [选项]
+
+子命令:
+  init <slug>
+      Exclusively create a new run; return its directory and effective policy
+  deviation <slug> --count N --reasonable M
+      偏离总数与其中合理的条数
+  security  <slug> --high N --medium M --low L
+      安全与规范检查的三级违规计数
+  lessons   <slug> --count N --files "a.md,b.md"
+      写入的 lessons 条数与文件列表
+  coverage  <slug> [--line N] [--branch N]
+      两项独立选填，只记录提供的数值；单项上报仅更新该项
+  gate-pass <slug> <node> [--kv k=v ...]
+      记录一次门禁通过。node 取 prd-review / tech-design /
+      tdd-implementation / code-review 之一
+  sync      <slug> [--probes]
+      校验报告并自动记录探针计数及 reconciliation；--probes 仅记录探针，不进行对账
+  render-report <slug>
+      从独立 JSON 直接更新 Markdown 报告的自动区域
+  verify-report <slug>
+      只读校验报告自动区域与 JSON 事实完全一致
+  summary   <slug>
+      先校验报告，再输出最终答复可引用的机器摘要（计数、ID、阻塞项）
+  archive   <slug> [--profile P]
+      渲染 quality-scorecard.txt 并更新 quality-trend.csv
+  rollback  <slug>
+      记录一次回滚（无自动埋点，供人工补录）
+
+说明:
+  输出根: 项目 output_dir / CODE_REVIEW_OUTPUT_DIR（默认 docs/work）
+  事件日志: <output_root>/workflow-events.log
+  scorecard: <output_root>/active/<slug>/quality-scorecard.txt
+  趋势:     <output_root>/quality-trend.csv
+EOF
+}
+
+# 先完整校验，再一次性追加派生事件；校验失败不写入计数。
+sync_review_results() {
+  local slug="$1" phase="${2:-final}" directory skill_dir rows batch="" line
+  local node event key value ts iso details="" status required duration high low
+  validate_slug "$slug"
+  directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
+  skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
+  local args=(--project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --events)
+  [ "$phase" != probes ] || args+=(--probes)
+  rows="$("${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" "${args[@]}")" || return 1
+  event_time
+  ts="$EVENT_TS"; iso="$EVENT_ISO"
+  printf -v batch '%s\t%s\t%s\t-\t-\treview-sync\tphase\t%s\n' "$ts" "$iso" "$slug" "$phase"
+  SYNC_TOTAL=0; SYNC_DONE=0
+  while IFS=$'\t' read -r node event key value; do
+    [ -n "$node" ] || continue
+    printf -v line '%s\t%s\t%s\t-\t%s\t%s\t%s\t%s\n' "$ts" "$iso" "$slug" "$node" "$event" "$key" "$value"
+    batch+="$line"
+    if [ "$event" = metric:reconcile ]; then
+      case "$key" in total) SYNC_TOTAL="$value" ;; done) SYNC_DONE="$value" ;; esac
+    elif [ "$event" = metric:probe ]; then
+      case "$key" in
+        status) status="$value" ;; required) required="$value" ;; duration) duration="$value" ;;
+        high) high="$value" ;; low) low="$value" ;;
+        medium)
+          printf -v line '%s status=%s required=%s duration=%s high=%s medium=%s low=%s\n' \
+            "$node" "$status" "$required" "$duration" "$high" "$value" "$low"
+          details+="$line" ;;
+      esac
+    fi
+  done <<< "$rows"
+  mkdir -p "$WF_WORK"
+  if [ ! -f "$WF_EVENTS" ]; then
+    printf '%s\n%s' "$EV_SCHEMA" "$batch" > "$WF_EVENTS"
+  else
+    printf '%s' "$batch" >> "$WF_EVENTS"
+  fi
+  printf '%s' "$details"
+  if [ "$phase" = probes ]; then
+    echo "已同步探针结果（尚未对账）"
+  else
+    echo "已同步报告: total=$SYNC_TOTAL done=$SYNC_DONE pending=$(( SYNC_TOTAL - SYNC_DONE ))"
+  fi
+}
+
+review_report() {
+  local slug="$1" action="$2" directory skill_dir
+  validate_slug "$slug"
+  directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
+  skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
+  "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
+    --project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" "$action"
+}
+
+summary_report() {
+  local slug="$1" directory skill_dir
+  validate_slug "$slug"
+  directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
+  skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
+  "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
+    --project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --summary
+}
+
+# 校验非负整数。空串在这里一律拒绝 —— 「没传」与「传了 0」必须区分开，
+# 否则一个漏传的参数会静默变成 0 分指标。
+require_uint() {   # <名称> <值>
+  case "${2:-}" in
+    ''|*[!0-9]*) die "$1 必须是非负整数，收到: '${2:-}'" ;;
+  esac
+}
+
+# 通用选项解析：把 "标志 值" 对收进 PARAM_* 全局变量。
+# 不用 getopt(1)：长选项在部分平台的 getopt 上不可用。
+#
+# 两次 shift 而不是 shift 2：--flag 恰为最后一个参数时 shift 2 会失败并
+# 触发 set -e 直接杀掉脚本；拆成两次则第二次失败可以用 || true 吞掉。
+# 取参一律 "${2:-}"：同样是为了躲开 set -u 在未绑定参数上的中止。
+parse_flags() {   # <...args>
+  PARAM_count=""; PARAM_reasonable=""; PARAM_low=""; PARAM_high=""
+  PARAM_medium=""; PARAM_files=""; PARAM_line=""; PARAM_branch=""
+  PARAM_line_set=false; PARAM_branch_set=false
+  PARAM_profile=""; PARAM_kv=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --count)      PARAM_count="${2:-}";      shift; shift 2>/dev/null || true ;;
+      --reasonable) PARAM_reasonable="${2:-}"; shift; shift 2>/dev/null || true ;;
+      --low)        PARAM_low="${2:-}";   shift; shift 2>/dev/null || true ;;
+      --high)       PARAM_high="${2:-}";       shift; shift 2>/dev/null || true ;;
+      --medium)     PARAM_medium="${2:-}";     shift; shift 2>/dev/null || true ;;
+      --files)      PARAM_files="${2:-}";      shift; shift 2>/dev/null || true ;;
+      --line)       PARAM_line_set=true; PARAM_line="${2:-}";       shift; shift 2>/dev/null || true ;;
+      --branch)     PARAM_branch_set=true; PARAM_branch="${2:-}";   shift; shift 2>/dev/null || true ;;
+      --profile)    PARAM_profile="${2:-}";    shift; shift 2>/dev/null || true ;;
+      --kv)         # 可重复。用换行分隔累积 —— --kv 的值本身不含换行（append_event 会消毒）。
+                    if [ -n "$PARAM_kv" ]; then
+                      PARAM_kv="$PARAM_kv
+${2:-}"
+                    else
+                      PARAM_kv="${2:-}"
+                    fi
+                    shift; shift 2>/dev/null || true ;;
+      *) return 1 ;;
+    esac
+  done
+  return 0
+}
+
+[ $# -ge 1 ] || { usage >&2; exit 1; }
+CMD="$1"; shift || true
+
+case "$CMD" in
+  init)
+    [ "$#" -eq 1 ] || die "init requires one new slug"
+    "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
+      --registry "${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}/references/probes.yaml" \
+      --project-root "$WF_ROOT" --init-review "$1"
+    ;;
+  -h|--help|help)
+    usage; exit 0 ;;
+
+  deviation)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "deviation: 未知选项"
+    [ -n "$PARAM_count" ]      || die "deviation: 缺少 --count"
+    [ -n "$PARAM_reasonable" ] || die "deviation: 缺少 --reasonable"
+    require_uint "--count" "$PARAM_count"
+    require_uint "--reasonable" "$PARAM_reasonable"
+    append_event "$slug" "-" "-" "metric:deviation" count      "$PARAM_count"
+    append_event "$slug" "-" "-" "metric:deviation" reasonable "$PARAM_reasonable"
+    echo "已记录 deviation: count=$PARAM_count reasonable=$PARAM_reasonable"
+    ;;
+
+  security)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "security: 未知选项"
+    require_uint "--low"      "${PARAM_low:-0}"
+    require_uint "--high"     "${PARAM_high:-0}"
+    require_uint "--medium"   "${PARAM_medium:-0}"
+    append_event "$slug" "-" "-" "metric:security" low      "${PARAM_low:-0}"
+    append_event "$slug" "-" "-" "metric:security" high     "${PARAM_high:-0}"
+    append_event "$slug" "-" "-" "metric:security" medium   "${PARAM_medium:-0}"
+    echo "已记录 security: high=${PARAM_high:-0} medium=${PARAM_medium:-0} low=${PARAM_low:-0}"
+    ;;
+
+  lessons)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "lessons: 未知选项"
+    [ -n "$PARAM_count" ] || die "lessons: 缺少 --count"
+    require_uint "--count" "$PARAM_count"
+    append_event "$slug" "-" "-" "metric:lessons" count "$PARAM_count"
+    append_event "$slug" "-" "-" "metric:lessons" files "${PARAM_files:-}"
+    echo "已记录 lessons: count=$PARAM_count files='${PARAM_files:-}'"
+    ;;
+
+  coverage)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "coverage: 未知选项"
+    # 显式提供的选项必须有有效值；先全部校验，避免只写入一半数据。
+    if [ "$PARAM_line_set" = true ]; then require_uint "--line" "$PARAM_line"; fi
+    if [ "$PARAM_branch_set" = true ]; then require_uint "--branch" "$PARAM_branch"; fi
+    if [ "$PARAM_line_set" = false ] && [ "$PARAM_branch_set" = false ]; then
+      echo "覆盖率未提供（视作未测量），不记录 metric:coverage" >&2
+      exit 0
+    fi
+    # 每项独立写入；省略的指标不写事件，也不覆盖该项已有记录。
+    if [ "$PARAM_line_set" = true ]; then
+      append_event "$slug" "-" "-" "metric:coverage" line "$PARAM_line"
+    fi
+    if [ "$PARAM_branch_set" = true ]; then
+      append_event "$slug" "-" "-" "metric:coverage" branch "$PARAM_branch"
+    fi
+    echo "已记录 coverage: line=${PARAM_line:-本次未上报} branch=${PARAM_branch:-本次未上报}"
+    ;;
+
+  gate-pass)
+    slug="${1:-}"; shift || true
+    node="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    [ -n "$node" ] || { echo "错误: 缺少 node" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "gate-pass: 未知选项"
+    if [ "$node" = code-review ]; then
+      review_report "$slug" --check-report
+      sync_review_results "$slug"
+      collect_metrics "$slug"
+      [ "$CM_RECONCILE_PENDING" -eq 0 ] || die "code-review 仍有未处置的 high"
+      [ "$CM_PROBE_REQUIRED_FAILED" -eq 0 ] || die "required 探针为 failed/error"
+      [ "$CM_COVERAGE_PASS" != false ] || die "增量行覆盖率低于基线"
+    fi
+    # 总是额外写一行 key="-"：门禁状态的判定依据是「这个 (slug,node) 发生过
+    # gate-pass」。像 prd-review 这种永远带 --kv 的埋点，若不写这行就检测不到。
+    append_event "$slug" "-" "$node" "gate-pass" "-" "-"
+    if [ -n "$PARAM_kv" ]; then
+      # PARAM_kv 以换行分隔累积（见 parse_flags）。用 IFS=$'\n' + for 拆分：
+      # 不能用 `read <<EOF`——未加引号的 heredoc 分隔符会对 body 做参数展开与
+      # **命令替换**，于是 --kv 值里的 $(...) 会被真的执行（命令注入）。
+      # for 循环在当前 shell 跑，die 才能正常终止脚本。
+      _old_ifs="$IFS"; IFS=$'\n'
+      for kv in $PARAM_kv; do
+        [ -n "$kv" ] || continue
+        k="${kv%%=*}"
+        v="${kv#*=}"
+        # 没有 = 时 ${kv#*=} 会原样返回整串，此时 v==kv 说明格式错。
+        [ "$v" != "$kv" ] || die "gate-pass: --kv 需要 k=v 形式，收到: '$kv'"
+        [ -n "$k" ] || die "gate-pass: --kv 的键不能为空: '$kv'"
+        append_event "$slug" "-" "$node" "gate-pass" "$k" "$v"
+      done
+      IFS="$_old_ifs"
+    fi
+    echo "已记录 gate-pass: $node"
+    ;;
+
+  render-report|verify-report)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] && [ "$#" -eq 0 ] || die "$CMD: 需要且仅接受一个 slug"
+    action=--write-report
+    [ "$CMD" != verify-report ] || action=--check-report
+    review_report "$slug" "$action"
+    ;;
+
+  summary)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] && [ "$#" -eq 0 ] || die "summary: 需要且仅接受一个 slug"
+    review_report "$slug" --check-report >/dev/null
+    summary_report "$slug"
+    ;;
+
+  sync)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || die "sync: 缺少 slug"
+    phase=final
+    if [ "${1:-}" = --probes ]; then phase=probes; shift; fi
+    [ "$#" -eq 0 ] || die "sync: 只接受 <slug> [--probes]"
+    sync_review_results "$slug" "$phase"
+    ;;
+
+  probe|reconcile)
+    die "手填探针计数和对账计数已停用，请写报告后调用 sync <slug> [--probes]"
+    ;;
+
+  archive)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "archive: 未知选项"
+    _review_dir="$(find_slug_dir "$slug" || true)"
+    _apply_snapshot "$slug"
+    if [ -d "$_review_dir/probes" ] || [ -f "$_review_dir/code-review.md" ] \
+      || [ "$CM_PROBE_TOTAL" -gt 0 ] || [ "$CM_RECONCILE_REPORTED" = 1 ]; then
+      review_report "$slug" --check-report
+      sync_review_results "$slug"
+    fi
+    # 先校验再写：否则校验失败时已经往日志里留下了一行孤立的 archive 事件。
+    require_events "$slug"
+    append_event "$slug" "-" "-" "archive" profile "${PARAM_profile:--}"
+    run_scorecard "$slug" "$PARAM_profile"
+    echo "已生成 scorecard: $(scorecard_of "$(find_slug_dir "$slug")")"
+    echo "已更新趋势: $WF_TREND"
+
+    # 「没走完流程就归档」的唯一可检测信号。只统计本 profile 的节点，
+    # 否则 hotfix（2 节点）会为 3 个不相干的节点发告警。
+    pending="$(_pending_count)"
+    if [ "$pending" -gt 0 ]; then
+      warn "本 profile 内有 $pending 个节点无门禁记录（PENDING）。注意本版埋点只覆盖 4 个节点，execution-plan 恒为 PENDING"
+    fi
+
+    ;;
+
+  rollback)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "rollback: 未知选项"
+    append_event "$slug" "-" "-" "rollback" "-" "1"
+    echo "已记录 rollback: $slug"
+    ;;
+
+  *)
+    echo "错误: 未知子命令: $CMD" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

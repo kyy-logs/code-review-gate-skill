@@ -1,0 +1,44 @@
+# code-review 探针注册表：维护探针清单、依赖和参数。
+# required / requires 及执行状态的含义见 references/output-schema.md 第 4 节。
+
+version: 1
+
+execution:
+  mode: parallel
+  max_retry: 1              # reconciliation 发现遗漏时重派的次数上限
+
+# requires 列出输入依赖；rules 默认使用内置规则，覆盖率由 test-coverage 内部可选处理。
+
+probes:
+  - name: behavior-review
+    title: 行为正确性
+    file: references/probes/behavior-review.md
+    required: true
+    requires: []
+
+  - name: test-coverage
+    title: 测试质量与增量覆盖率
+    file: references/probes/test-coverage.md
+    required: true
+    requires: []
+    params:
+      line_target: 85
+      branch_target: 80
+
+  - name: repo-guard
+    title: 仓库规范
+    file: references/probes/repo-guard.md
+    required: true
+    requires: [rules]
+    params:
+      read_only: true
+      # 规则包选择优先级见 probes/repo-guard.md。
+      rules_dir: references/rules
+
+  - name: impact-analysis
+    title: 影响分析
+    file: references/probes/impact-analysis.md
+    required: false
+    requires: []
+    params:
+      depth: 1              # 调用方追踪深度（fan-in 的层数）

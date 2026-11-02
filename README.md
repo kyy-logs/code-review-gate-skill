@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill source lives in [`skills/code-review/`](skills/code-review/), independently of any host's installation directory. The current version is a beta release; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current version is a beta release; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -46,7 +46,7 @@ gate behavior may change before 1.0.
   records before using them with this release.
 - **Scope:** static-first review with four probes and JSON-derived report/gate
   output. It does not replace tests, CI, or human review.
-- **Validation:** 52 offline pipeline, NEWS, and installation tests; clean-project
+- **Validation:** 74 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
   end-to-end gate runs; additional probe smokes. These are regression checks,
   not a general recall claim. Concurrency-defect detection has not been
   validated.
@@ -90,10 +90,14 @@ The implementation context does not sign off on its own work. Four probes run in
 Run this command **inside your project**:
 
 ```bash
+# English (default)
 npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review --yes
+
+# Chinese
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-zh --yes
 ```
 
-Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/code-review/`; Claude Code installs to `.claude/skills/code-review/`. Node.js 22.20+ is required. This installs only the skill; there is no separate reviewer adapter.
+Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/<skill>/`; Claude Code installs to `.claude/skills/<skill>/`. Node.js 22.20+ is required. Install one language per project. The Python installers also accept `--lang en|zh-CN` and default to English.
 
 ### Run
 
@@ -158,6 +162,12 @@ The four probes use the same model in fresh contexts. This is separation of duti
 
 Probes are intentionally narrow. `behavior-review` is not a linter, and `repo-guard` is not a general bug scanner.
 
+### Language and stack coverage
+
+The default `repo-guard` workflow selects `.java`, `.ts`, `.tsx`, and `.vue` files for pattern scanning. The built-in rule pack includes Java- and Spring-specific guidance; selecting an extension does not establish complete framework or language coverage.
+
+AI semantic checks can inspect relevant code beyond those extensions, but their results depend on the model and available contracts, source, and tests. The historical cases below exercise particular stacks and skill snapshots; they do not establish equally validated support across all stacks. Use applicable project rules and record unverified dependencies or language-specific behavior.
+
 ## Evidence contract
 
 Every finding records:
@@ -192,6 +202,10 @@ A project rule package **replaces** the built-in package; it is not merged with 
 - Not a fixer: it does not modify the code under review.
 
 ## Validation
+
+Offline tests check JSON validation, derived counts, report consistency, installation, and gate behavior. Passing them does not establish defect-detection recall, false-positive rates, or the correctness of an AI finding.
+
+A controlled comparison against a single-agent review, measuring missed defects, false positives, wall-clock time, and token usage on the same cases and model configuration, has not yet been established. The historical runs below are snapshot-specific observations and do not demonstrate an improvement over that baseline.
 
 <details>
 <summary>11-case historical Java regression (2026-10-29)</summary>
@@ -245,7 +259,7 @@ The evaluation harness and raw reports are kept out of the published repository.
 ## Requirements
 
 - Claude Code with Agent Skills support, or Codex with custom-agent support.
-- Bash, Git, awk, grep, sed.
+- Bash 3.2+, Git, awk, grep, sed (macOS: invoke with `/bin/bash`; Linux/Windows Git Bash: `bash`).
 - Python 3.9+ is required to run the review scripts; PyYAML is used for report parsing and metrics.
 - Node.js 22.20+ is required for the `npx skills` install entry.
 
@@ -263,28 +277,33 @@ code-review-skill/
 │   └── code-review-architecture.zh-CN.svg
 ├── .github/workflows/
 │   ├── news-update.yml
+│   ├── skill-validation.yml
 │   ├── star-history.yml
 │   └── sync-news.yml
 ├── scripts/
+│   ├── check-skill-locales.py
 │   ├── install
 │   ├── install.py
 │   ├── install-remote.py
 │   ├── news-update.py
+│   ├── sync-skill-scripts.py
 │   └── sync-news.py
+├── shared/scripts/
+│   ├── collect-metrics
+│   ├── lib-metrics
+│   ├── rule-grep
+│   └── sync-results.py
 ├── skills/
-│   └── code-review/
+│   ├── code-review/
+│   │   ├── SKILL.md
+│   │   ├── assets/
+│   │   ├── references/
+│   │   └── scripts/
+│   └── code-review-zh/
 │       ├── SKILL.md
-│       ├── assets/code-review.md
+│       ├── assets/
 │       ├── references/
-│       │   ├── probes.yaml
-│       │   ├── output-schema.md
-│       │   ├── probes/
-│       │   └── rules/
 │       └── scripts/
-│           ├── collect-metrics
-│           ├── lib-metrics
-│           ├── rule-grep
-│           └── sync-results.py
 └── tests/
 ```
 
@@ -307,3 +326,28 @@ For user-facing changes, add an entry to `NEWS.md`. Pushes to `main` update the 
 ## License
 
 This repository is distributed under the [MIT License](LICENSE).
+
+
+## Project policy and output
+
+Optional `.code-review/config.json` (paths relative to the reviewed project):
+
+```json
+{
+  "output_dir": "docs/work",
+  "line_target": 85,
+  "branch_target": 80
+}
+```
+
+85% / 80% are configurable defaults. Line coverage blocks below target; branch coverage is advisory.
+Probes, gates, and reports use the same effective targets. `CODE_REVIEW_OUTPUT_DIR` overrides the output root;
+pass identical settings to every shell invocation. Source inspection is read-only, but the workflow writes
+`active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, root-level `workflow-events.log`,
+and scorecards / `quality-trend.csv` on archive.
+Start a new review with `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`.
+Existing active, archived, or event-history slugs are rejected. Re-rendering the same run updates only automatic report regions;
+do not run concurrent writers for the same run. policy.json records the initialization snapshot; keep configuration stable when
+resuming, and re-check findings and re-render after policy changes.
+The minimum shell is Bash 3.2. macOS can use `/bin/bash`; Linux / Windows Git Bash use `bash`.
+A macOS CI job is configured; a passing macOS result has not been established locally.
