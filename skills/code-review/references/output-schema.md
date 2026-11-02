@@ -48,7 +48,7 @@ Checked scope, limitations, and fix suggestions go in the human report; the mach
 | Level | Criterion | Enters reconciliation |
 |---|---|---|
 | `high` | Serious security rule violation / money or data correctness issue / HIGH-severity standards rule violation / contract break / measured diff line coverage below the effective project target (default 85%) / acceptance item failing | **Yes** |
-| `medium` | Maintainability issues, missing tests | No (record only) |
+| `medium` | Confirmed behavioral defects that deviate from expected behavior, have localized impact, and do not meet the high criteria; maintainability issues, missing tests | No (record only) |
 | `low` | Style, naming | No |
 
 Only the three levels above are accepted; other levels are an error and are not auto-converted or used to rewrite historical records.
@@ -66,6 +66,8 @@ When the basis has not been verified or listed, the maximum is `medium`, noting 
 
 - `high`: at public contract boundaries such as API / SPI / cache / state machine, an incorrect return, exception, or missed invalidation occurs under reachable inputs. Source-code reasoning may serve as evidence; end-to-end execution is not required.
 - Maximum `medium`: the boundary error is not yet proven and downstream impact is only speculated; or the performance issue is unmeasured.
+
+Do not omit a proven behavioral defect solely because performance is unmeasured or downstream effects are unverified.
 
 When a boundary error is proven, unverified downstream UI / templates / integration layers are recorded only in `evidence` and do not lower the severity.
 
