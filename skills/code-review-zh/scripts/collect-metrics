@@ -241,6 +241,9 @@ case "$CMD" in
       [ "$CM_RECONCILE_PENDING" -eq 0 ] || die "code-review 仍有未处置的 high"
       [ "$CM_PROBE_REQUIRED_FAILED" -eq 0 ] || die "required 探针为 failed/error"
       [ "$CM_COVERAGE_PASS" != false ] || die "增量行覆盖率低于基线"
+      if [ "$COVERAGE_BRANCH_BLOCKING" = true ]; then
+        [ "$CM_COVERAGE_BRANCH_PASS" != false ] || die "分支覆盖率低于项目阈值"
+      fi
     fi
     # 总是额外写一行 key="-"：门禁状态的判定依据是「这个 (slug,node) 发生过
     # gate-pass」。像 prd-review 这种永远带 --kv 的埋点，若不写这行就检测不到。

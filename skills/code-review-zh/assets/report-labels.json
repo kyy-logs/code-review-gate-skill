@@ -37,5 +37,7 @@
   "summary_clear": "无已记录阻塞项",
   "summary_none": "none",
   "finding_status_suffix": "（{status}）",
-  "coverage_policy": "覆盖率策略：增量行覆盖率 ≥ {line_target}%；分支目标 {branch_target}%（仅提示）。"
+  "coverage_policy": "覆盖率策略：增量行覆盖率 ≥ {line_target}%；分支目标 {branch_target}%（{branch_mode}）。",
+  "coverage_branch_advisory": "仅提示",
+  "coverage_branch_blocking": "已测量且不达标时阻塞"
 }

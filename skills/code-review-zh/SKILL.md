@@ -69,10 +69,10 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
    ```bash
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug}
    ```
-   返回 JSON 给出实际 `review_dir`、`output_dir`、`line_target` 和 `branch_target`。
+   返回 JSON 给出实际 `review_dir`、`output_dir`、`line_target`、`branch_target` 和 `branch_blocking`。
    同名活动目录、归档或历史事件存在时拒绝初始化；新审查换用唯一 slug，不覆盖旧产物。
    明确继续同一轮时复用原目录，不再次 init；不得同时派发两轮写入同一目录。
-   将实际目录及有效阈值交给所有探针，覆盖注册表中的默认覆盖率参数。报告模板由 init 创建。
+   将实际目录及有效覆盖率策略交给所有探针，覆盖注册表中的默认覆盖率参数。报告模板由 init 创建。
    源码检查只读；本流程会写报告、探针 JSON、policy.json、事件日志和归档指标。
 
 2. **读注册表，确定探针清单**：Read `references/probes.yaml`，按 `requires` 判断：
@@ -163,6 +163,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 | high finding 未完成 reconciliation（`RECONCILE_PENDING > 0`） | 按步骤 4 处理，修复后重派受影响的探针 |
 | reconcile 从未上报（`RECONCILE_REPORTED=0`） | 完成步骤 4；没有 high 也须执行最终同步 |
 | 提供了覆盖率数据且低于基线（增量行覆盖率低于项目 line_target，默认 85%） | 列明覆盖缺口，补测试后重新审查 |
+| branch_blocking=true 且已测量的分支覆盖率低于 branch_target（默认 80%） | 补测试后重新测量；未测量不按 0% 处理 |
 | 提供了验收标准且未全过，或标准本身有歧义 | 列明未通过项；有歧义先澄清，不得自行勾验通过 |
 | 有 high finding 停在 `wontfix` | 按输出契约完成处置，不能用“不修”冲抵待办 |
 

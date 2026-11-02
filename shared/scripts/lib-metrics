@@ -38,13 +38,13 @@ WF_ROOT="$(_wf_find_root || true)"
 _policy="$("${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
   --registry "${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}/references/probes.yaml" \
   --project-root "$WF_ROOT" --runtime-config)" || die "invalid project policy"
-IFS=$'\t' read -r WF_WORK COVERAGE_TARGET COVERAGE_BRANCH_TARGET <<< "$_policy"
+IFS=$'\t' read -r WF_WORK COVERAGE_TARGET COVERAGE_BRANCH_TARGET COVERAGE_BRANCH_BLOCKING <<< "$_policy"
 WF_EVENTS="$WF_WORK/workflow-events.log"
 WF_TREND="$WF_WORK/quality-trend.csv"
 
 
-# 分支覆盖率目标。默认取 80%：它是底线规则，比模板里的执行值引用得更广。
-# 注意它**不参与扣分/降档**，只出一个判定位（见 CM_COVERAGE_BRANCH_PASS）。
+# 分支覆盖率默认只提示；项目可开启 COVERAGE_BRANCH_BLOCKING 参与门禁。
+# 分支本身不单独扣分/降档，实测判定位见 CM_COVERAGE_BRANCH_PASS。
 
 event_time() {
   if [ "${BASH_VERSINFO[0]}" -gt 4 ] || { [ "${BASH_VERSINFO[0]}" -eq 4 ] && [ "${BASH_VERSINFO[1]}" -ge 2 ]; }; then
@@ -554,13 +554,7 @@ collect_metrics() {   # <slug>
     esac
   fi
 
-  # 分支覆盖率：**只出判定位，不参与扣分与降档**。
-  # 为什么不动评分：skills 的 HARD-GATE 只写了行覆盖率。评分脚本自行加码，
-  # 会把「已按流程走完」的需求判低一档 —— 那是脚本越权，且会让 scorecard
-  # 与 skill 里写的门禁对不上。
-  # 那为什么还要这个键：此前分支值采了、也渲染了，却只是一个裸数字，读的人
-  # 无从判断 73% 算好还是算差，而且目标值上游两处还互相矛盾（见文件头）。
-  # 给出判定位 = 把「阈值是多少、过没过」显式化，消费端不必自己记住。
+  # 保留实测判定位；gate-pass 仅在项目开启 branch_blocking 时据此阻塞。
   case "$CM_COVERAGE_BRANCH_MEASURED" in
     true)
       if [ "$CM_COVERAGE_BRANCH" -ge "$COVERAGE_BRANCH_TARGET" ]; then
@@ -629,6 +623,7 @@ render_scorecard() {
   _qv _q_COVERAGE_TARGET "$COVERAGE_TARGET"
   _qv _q_COVERAGE_PASS "$CM_COVERAGE_PASS"
   _qv _q_COVERAGE_BRANCH_TARGET "$COVERAGE_BRANCH_TARGET"
+  _qv _q_COVERAGE_BRANCH_BLOCKING "$COVERAGE_BRANCH_BLOCKING"
   _qv _q_COVERAGE_BRANCH_PASS "$CM_COVERAGE_BRANCH_PASS"
   _qv _q_DEVIATION_COUNT "$CM_DEVIATION_COUNT"
   _qv _q_DEVIATION_REASONABLE "$CM_DEVIATION_REASONABLE"
@@ -668,8 +663,8 @@ render_scorecard() {
 #     与 GATE_* 同一套枚举
 #   - COVERAGE_LINE / COVERAGE_BRANCH 保持数值型（未测量时为 0），好让数值比较
 #     不至于报错
-#   - COVERAGE_BRANCH_PASS 只是判定位：**分支不达标不影响 QUALITY_SCORE 与
-#     QUALITY_GRADE**。门禁（HARD-GATE）只定义了行覆盖率
+#   - COVERAGE_BRANCH_BLOCKING 控制分支实测不达标是否阻塞门禁；默认 false。
+#     分支不单独影响 QUALITY_SCORE 与 QUALITY_GRADE，评分不能代替门禁结果。
 #   - PROBE_* 是**聚合值**，逐探针明细在 docs/work/active/<slug>/probes/ 下。
 #     PROBE_REQUIRED_FAILED 只统计注册表标了 required 且状态为 failed/error 的
 #     探针 —— **skipped 不算失败**
@@ -696,6 +691,7 @@ COVERAGE_BRANCH=$_q_COVERAGE_BRANCH
 COVERAGE_TARGET=$_q_COVERAGE_TARGET
 COVERAGE_PASS=$_q_COVERAGE_PASS
 COVERAGE_BRANCH_TARGET=$_q_COVERAGE_BRANCH_TARGET
+COVERAGE_BRANCH_BLOCKING=$_q_COVERAGE_BRANCH_BLOCKING
 COVERAGE_BRANCH_PASS=$_q_COVERAGE_BRANCH_PASS
 
 # 偏离指标

@@ -339,11 +339,14 @@ code-review-skill/
 {
   "output_dir": "docs/work",
   "line_target": 85,
-  "branch_target": 80
+  "branch_target": 80,
+  "branch_blocking": false
 }
 ```
 
-85% / 80% 是可配置默认值；行覆盖率参与阻塞，分支仅提示。探针、门禁和报告使用相同有效阈值。
+85% / 80% 是可配置默认值；已测量的行覆盖率不达标时阻塞，分支默认仅提示。
+设置 `branch_blocking: true` 后，已测量的分支覆盖率低于 `branch_target` 也会阻塞。
+未测量不按 0% 处理；该开关控制门禁，不额外引入评分扣分。探针、门禁和报告使用相同有效策略。
 `CODE_REVIEW_OUTPUT_DIR` 可覆盖产物根目录；独立 shell 调用须传入同样配置。
 源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、`policy.json`、
 根目录的 `workflow-events.log`，以及 archive 命令生成的 scorecard 和 `quality-trend.csv`。

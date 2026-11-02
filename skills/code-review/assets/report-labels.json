@@ -37,5 +37,7 @@
   "summary_clear": "no recorded blockers",
   "summary_none": "none",
   "finding_status_suffix": " ({status})",
-  "coverage_policy": "Coverage policy: line >= {line_target}%; branch target {branch_target}% (advisory)."
+  "coverage_policy": "Coverage policy: line >= {line_target}%; branch target {branch_target}% ({branch_mode}).",
+  "coverage_branch_advisory": "advisory",
+  "coverage_branch_blocking": "blocks below target when measured"
 }

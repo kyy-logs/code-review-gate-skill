@@ -336,11 +336,14 @@ Optional `.code-review/config.json` (paths relative to the reviewed project):
 {
   "output_dir": "docs/work",
   "line_target": 85,
-  "branch_target": 80
+  "branch_target": 80,
+  "branch_blocking": false
 }
 ```
 
-85% / 80% are configurable defaults. Line coverage blocks below target; branch coverage is advisory.
+85% / 80% are configurable defaults. Measured line coverage below target blocks; branch coverage is advisory by default.
+Set `branch_blocking` to `true` to also block when measured branch coverage is below `branch_target`.
+Unmeasured coverage is not treated as 0%. The flag controls the gate, not a separate score deduction.
 Probes, gates, and reports use the same effective targets. `CODE_REVIEW_OUTPUT_DIR` overrides the output root;
 pass identical settings to every shell invocation. Source inspection is read-only, but the workflow writes
 `active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, root-level `workflow-events.log`,

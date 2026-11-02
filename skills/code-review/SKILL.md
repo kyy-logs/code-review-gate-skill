@@ -68,10 +68,10 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
    ```bash
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug}
    ```
-   The returned JSON gives `review_dir`, `output_dir`, `line_target`, and `branch_target`.
+   The returned JSON gives `review_dir`, `output_dir`, `line_target`, `branch_target`, and `branch_blocking`.
    Existing active directories, archived runs, or event history with the same slug are rejected.
    Use a unique slug for a new review; explicitly continuing the same run reuses its directory without init.
-   Never dispatch two runs writing the same directory. Pass the actual directory and effective targets to all probes,
+   Never dispatch two runs writing the same directory. Pass the actual directory and effective coverage policy to all probes,
    overriding the registry's coverage defaults. Init creates the report template.
    Source inspection is read-only; the workflow writes reports, probe JSON, policy.json, events, and archive metrics.
 
@@ -163,6 +163,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 | A high finding has not completed reconciliation (`RECONCILE_PENDING > 0`) | Handle per step 4, and re-dispatch the affected probes after fixing |
 | Reconciliation was never reported (`RECONCILE_REPORTED=0`) | Complete step 4; run the final synchronization even when there are no high findings |
 | Coverage data was provided and is below baseline (below project line_target; default 85%) | List the coverage gaps, add tests, and re-review |
+| branch_blocking=true and measured branch coverage is below branch_target (default 80%) | Add tests and re-measure; unmeasured coverage is not 0% |
 | Acceptance criteria were provided and not all pass, or the criteria themselves are ambiguous | List the failing items; clarify ambiguity first, and do not self-check them as passing |
 | A high finding remains in `wontfix` | Complete handling per the output contract; "won't fix" cannot offset a pending item |
 

@@ -82,6 +82,78 @@ class ProjectPolicyTests(BehaviorFixture, unittest.TestCase):
             self.assertNotEqual(self.command('coverage', 'example', '--line', '75').returncode, 0)
             self.assertFalse((self.root / 'docs/work/workflow-events.log').exists())
 
+    def test_branch_coverage_is_advisory_by_default_and_when_disabled(self):
+        for policy in ({}, {'branch_blocking': False}):
+            with self.subTest(policy=policy):
+                self.policy(**policy)
+                for args in [('render-report', 'example'),
+                             ('coverage', 'example', '--line', '90', '--branch', '0'),
+                             ('gate-pass', 'example', 'code-review')]:
+                    result = self.command(*args)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_enabled_branch_gate_blocks_below_project_target_and_allows_boundary(self):
+        self.policy(branch_target=60, branch_blocking=True)
+        for args in [('render-report', 'example'),
+                     ('coverage', 'example', '--line', '90', '--branch', '59')]:
+            result = self.command(*args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        result = self.command('gate-pass', 'example', 'code-review')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('分支覆盖率', result.stderr)
+        events = self.root / 'docs/work/workflow-events.log'
+        self.assertNotIn('\tcode-review\tgate-pass\t', events.read_text(encoding='utf-8'))
+        self.assertEqual(self.command('coverage', 'example', '--branch', '60').returncode, 0)
+        result = self.command('gate-pass', 'example', 'code-review')
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_enabled_branch_gate_distinguishes_unmeasured_from_zero(self):
+        self.policy(branch_blocking=True)
+        for args in [('render-report', 'example'), ('coverage', 'example', '--line', '90'),
+                     ('gate-pass', 'example', 'code-review'), ('archive', 'example')]:
+            result = self.command(*args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        card = (self.review / 'quality-scorecard.txt').read_text(encoding='utf-8')
+        self.assertIn('COVERAGE_BRANCH_PASS="SKIPPED:未测量"', card)
+        self.assertEqual(self.command('coverage', 'example', '--branch', '0').returncode, 0)
+        result = self.command('gate-pass', 'example', 'code-review')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('分支覆盖率', result.stderr)
+
+    def test_branch_policy_is_handed_off_and_rendered_in_both_languages(self):
+        for package, text in (('code-review', 'blocks below target'),
+                              ('code-review-zh', '不达标时阻塞')):
+            with self.subTest(package=package):
+                self.policy(branch_blocking=True, branch_target=65)
+                skill = SKILL.parent / package
+                def run(*args):
+                    return subprocess.run(
+                        [sys.executable, '-X', 'utf8', str(skill / 'scripts/sync-results.py'),
+                         '--project-root', str(self.root), '--registry',
+                         str(skill / 'references/probes.yaml'), *args],
+                        capture_output=True, text=True, encoding='utf-8', timeout=30)
+                result = run('--init-review', package)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                policy = json.loads(result.stdout)
+                self.assertIs(policy['branch_blocking'], True)
+                snapshot = json.loads((self.root / 'docs/work/active' / package / 'policy.json').read_text())
+                self.assertIs(snapshot['branch_blocking'], True)
+                result = run('--review-dir', str(self.review), '--write-report')
+                self.assertEqual(result.returncode, 0, result.stderr)
+                report = (self.review / 'code-review.md').read_text(encoding='utf-8')
+                self.assertIn('65%', report)
+                self.assertIn(text, report)
+                self.assertEqual(run('--review-dir', str(self.review), '--check-report').returncode, 0)
+
+    def test_branch_blocking_requires_a_boolean_before_writing(self):
+        for value in ('true', 'false', 0, 1, None, []):
+            with self.subTest(value=value):
+                self.policy(branch_blocking=value)
+                result = self.command('coverage', 'example', '--branch', '70')
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('branch_blocking must be a boolean', result.stderr)
+                self.assertFalse((self.root / 'docs/work/workflow-events.log').exists())
+
     def test_event_clock_is_numeric_and_iso_formatted(self):
         result = self.command('coverage', 'example', '--line', '90')
         self.assertEqual(result.returncode, 0, result.stderr)

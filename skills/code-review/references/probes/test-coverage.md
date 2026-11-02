@@ -29,7 +29,7 @@ When expected behavior is still under contract dispute, record an unverified ite
 
 ## 3. Optional coverage check and reporting
 
-Use effective `line_target` / `branch_target` handed off by init; project policy takes precedence, defaults are 85 / 80.
+Use effective `line_target` / `branch_target` / `branch_blocking` handed off by init; project policy takes precedence, defaults are 85 / 80 / false.
 Compare against these effective targets, not a separate fixed 85% baseline.
 
 1. Prefer reusing an existing coverage report that corresponds to the review's target version and modules.
@@ -42,7 +42,7 @@ Compare against these effective targets, not a separate fixed 85% baseline.
 |---|---|
 | Measured diff line coverage ≥ line_target | Meets target |
 | Measured diff line coverage < line_target | high finding, blocks merge |
-| Branch coverage | Target branch_target (default 80%); falling short is advisory only and does not block or lower scores |
+| Measured branch coverage < branch_target (default 80%) | Advisory by default; when branch_blocking=true, high finding and blocks merge. No separate score deduction |
 | Confirmed no executable incremental lines | Record coverage as "not applicable", explain why, and do not fill in 0% or 100% |
 | A specified report is unreadable, unparsable, incomplete, or version-mismatched, or the measurement command fails | `error`; must not be recorded as "not measured" or "not applicable" |
 

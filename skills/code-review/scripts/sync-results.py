@@ -20,7 +20,8 @@ STATUSES = ('open', 'reconciled', 'wontfix', 'false-positive')
 NAME = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]*\Z')
 LABELS_PATH = Path(__file__).resolve().parents[1] / 'assets' / 'report-labels.json'
 LABEL_KEYS = frozenset({
-    'coverage_policy', 'language', 'probe_table_header', 'probe_table_separator',
+    'coverage_policy', 'coverage_branch_advisory', 'coverage_branch_blocking',
+    'language', 'probe_table_header', 'probe_table_separator',
     'required_yes', 'required_no',
     'status_passed', 'status_failed', 'status_error', 'status_skipped',
     'findings_heading', 'finding_id', 'finding_location', 'finding_status',
@@ -63,7 +64,7 @@ def runtime_config(project, configuration):
     project = Path(project).resolve()
     path = project / '.code-review/config.json'
     data = load_record(path) if path.exists() else {}
-    fields(data, (), ('output_dir', 'line_target', 'branch_target'), 'project policy')
+    fields(data, (), ('output_dir', 'line_target', 'branch_target', 'branch_blocking'), 'project policy')
     registry_data = yaml.load(Path(configuration).read_text(encoding='utf-8-sig'), Loader=UniqueLoader)
     params = next((p.get('params', {}) for p in registry_data['probes']
                    if p['name'] == 'test-coverage'), {})
@@ -72,6 +73,9 @@ def runtime_config(project, configuration):
         value = data.get(key, params.get(key, default))
         require(type(value) is int and 0 <= value <= 100, key + ' must be an integer from 0 to 100')
         result[key] = value
+    blocking = data.get('branch_blocking', params.get('branch_blocking', False))
+    require(type(blocking) is bool, 'branch_blocking must be a boolean')
+    result['branch_blocking'] = blocking
     output = os.environ.get('CODE_REVIEW_OUTPUT_DIR', data.get('output_dir', 'docs/work'))
     text(output, 'output_dir')
     require(not any(c in output for c in '\t\r\n'), 'invalid output_dir')
@@ -236,7 +240,8 @@ def render_sections(summary, labels, policy=None):
     gate += labels['gate_detail'].format(pending=r['pending'], failed=len(failed))
     gate += '\n\n' + labels['gate_footer']
     if policy is not None:
-        gate += '\n\n' + labels['coverage_policy'].format(**policy)
+        branch_mode = labels['coverage_branch_blocking' if policy['branch_blocking'] else 'coverage_branch_advisory']
+        gate += '\n\n' + labels['coverage_policy'].format(branch_mode=branch_mode, **policy)
     return dict(probes='\n'.join(rows).strip(), gate=gate)
 
 
@@ -337,7 +342,8 @@ def main():
                 init_review(args.project_root, args.registry, args.init_review)
             else:
                 policy = runtime_config(args.project_root, args.registry)
-                print('{output_dir}\t{line_target}\t{branch_target}'.format(**policy))
+                print('{output_dir}\t{line_target}\t{branch_target}\t{branch_blocking}'.format(
+                    **dict(policy, branch_blocking=str(policy['branch_blocking']).lower())))
             return 0
         require(args.review_dir is not None, 'review directory required')
         labels = load_labels()

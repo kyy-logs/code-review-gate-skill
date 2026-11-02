@@ -24,6 +24,7 @@ probes:
     params:
       line_target: 85
       branch_target: 80
+      branch_blocking: false
 
   - name: repo-guard
     title: Repository standards
