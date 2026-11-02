@@ -162,6 +162,12 @@ The four probes use the same model in fresh contexts. This is separation of duti
 
 Probes are intentionally narrow. `behavior-review` is not a linter, and `repo-guard` is not a general bug scanner.
 
+### Language and stack coverage
+
+The default `repo-guard` workflow selects `.java`, `.ts`, `.tsx`, and `.vue` files for pattern scanning. The built-in rule pack includes Java- and Spring-specific guidance; selecting an extension does not establish complete framework or language coverage.
+
+AI semantic checks can inspect relevant code beyond those extensions, but their results depend on the model and available contracts, source, and tests. The historical cases below exercise particular stacks and skill snapshots; they do not establish equally validated support across all stacks. Use applicable project rules and record unverified dependencies or language-specific behavior.
+
 ## Evidence contract
 
 Every finding records:
@@ -196,6 +202,10 @@ A project rule package **replaces** the built-in package; it is not merged with 
 - Not a fixer: it does not modify the code under review.
 
 ## Validation
+
+Offline tests check JSON validation, derived counts, report consistency, installation, and gate behavior. Passing them does not establish defect-detection recall, false-positive rates, or the correctness of an AI finding.
+
+A controlled comparison against a single-agent review, measuring missed defects, false positives, wall-clock time, and token usage on the same cases and model configuration, has not yet been established. The historical runs below are snapshot-specific observations and do not demonstrate an improvement over that baseline.
 
 <details>
 <summary>11-case historical Java regression (2026-10-29)</summary>
