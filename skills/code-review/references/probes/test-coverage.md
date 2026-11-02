@@ -46,14 +46,7 @@ Compare against these effective targets, not a separate fixed 85% baseline.
 | Confirmed no executable incremental lines | Record coverage as "not applicable", explain why, and do not fill in 0% or 100% |
 | A specified report is unreadable, unparsable, incomplete, or version-mismatched, or the measurement command fails | `error`; must not be recorded as "not measured" or "not applicable" |
 
-The agent hands off valid measured values, and the main executor reports them with the following command; `--line` accepts only diff line coverage:
-
-```bash
-bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" coverage {slug} --line {diff-line-coverage}
-```
-
-Add `--branch {branch-coverage}` when a branch value exists, or report only that item.
-Omit metrics that are unmeasured or not applicable; do not fill in 0. Do not call it when neither item has a valid value. A single-item report updates only that item, and the script does not verify the statistical basis.
+Return the report path, target version, numerator/denominator, and percentage for valid coverage; the main executor reports them per `SKILL.md`. Do not fill unmeasured or inapplicable metrics with 0.
 
 ## 4. Reporting
 

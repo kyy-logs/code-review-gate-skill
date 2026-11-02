@@ -37,7 +37,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 ## Review Process
 
 > Check items are not hardcoded in this file; they are driven by the `references/probes.yaml` registry.
-> Probe implementation details are in `references/probes/<probe-name>.md`; this file only handles **orchestration**.
+> Probe implementation details are in `references/probes/<probe-name>.md`; this file covers **main workflow orchestration and shared probe execution boundaries**.
 >
 > **Execution boundary: static review by default.** For coverage checks, prefer reusing an existing report;
 > when measurement is needed, coverage commands may be run within what this round's task allows. Other checks remain read-only evidence.
@@ -82,32 +82,40 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
 3. **Run probes in parallel**:
 
-   **Dispatch**: the main executor dispatches an independent agent per probe according to the registry, providing the review scope, diff, project root, skill path, and that probe's inputs and `params`, and including in the dispatch prompt the common constraints from "Execution boundary" above and the "Execution" part of this step.
+   **Dispatch**: the main executor dispatches an independent agent per probe according to the registry, providing the review scope, diff, project root, skill path, and that probe's inputs and `params`, and including in the dispatch prompt "Execution boundary" above and "Shared probe constraints" in this step.
+   Also pass any provided requirements, acceptance criteria, and change context as text or file paths, and ask each probe to read relevant material. Note missing inputs without inventing them.
+   If dependency source or contract material is already available, pass its path, version, and origin for on-demand reuse; do not pre-download all dependencies.
+
    The agent reads the instructions pointed to by the registry entry's `file` and `references/output-schema.md`, and executes according to the parameters.
    Run in batches when concurrent slots are insufficient; if independent agents are unavailable, run serially and record the limitation.
 
-   **Execution**: an agent checks only its own probe, and does not re-run the whole process or dispatch further agents; the source version follows step 1.
+   **Shared probe constraints (include in dispatch)**: an agent checks only its own probe, and does not re-run the whole process or dispatch further agents; the source version follows step 1.
    A finding must explain how this change introduced or triggered the issue; unrelated pre-existing issues are described separately and are not included in this round's finding list or counts.
-   Reuse context already read and only read more as needed; merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
+
+   Reuse the review scope and material confirmed and handed off by the main executor, together with context already read by this agent.
+   Read more as needed; merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
    Local search is limited to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates; when something is missing or unreadable, record the specific evidence gap,
    without expanding to the disk root or the user directory, and without repeating searches when there is no new lead.
+
    Write only `{output_root}/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics.
    Before returning, wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited, then report completion.
 
-   **Handoff**: every probe must have a JSON; state the reason when errored or skipped; on execution errors, keep the issues already found and let other probes continue.
+   **Handoff**: every probe must have JSON for this run. Record skip or error reasons according to the output contract; on execution errors, preserve findings already made and let the other probes continue. If an agent fails to start or returns no valid result, the main executor records `error` and the reason without reusing old results.
    The return message briefly states the JSON path, the actual checked scope, unverified items, and specific evidence gaps, without repeating the findings; the main executor incorporates the relevant limitations into the final report.
-   If an agent fails to start or does not return a valid result, the main executor records `error` and the reason, and does not reuse that probe's old results.
    Record `duration` when reliable timing is available; the sum of per-probe durations does not represent this round's wall-clock time.
    `test-coverage` hands off the report path, target version, numerator/denominator, and percentage for valid coverage via its return message,
-   and the main executor runs `collect-metrics coverage`; do not fill in numbers when unmeasured.
+   and the main executor reports them; `--line` accepts only diff line coverage:
+   ```bash
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" coverage {slug} --line {diff-line-coverage}
+   ```
+   Add `--branch {branch-coverage}` when a branch value exists, or report only that item. Omit unmeasured or inapplicable metrics without filling in 0; do not call it when neither value is valid. A single-item report updates only that item, and the script does not verify the statistical basis.
 
-   **Aggregation**: wait for all agents to finish, and let the main executor synchronize uniformly; `required` is read from the registry, counts at each level are computed item by item from the JSON, and raw results are not rewritten and counts are not hand-filled.
+   **Aggregation**: after all agents finish, the main executor runs the synchronization command. The script reads `required` from the registry and computes counts at each level from the probe JSON; do not rewrite raw results or hand-fill counts.
    Do not deduplicate across probes yet; count by original finding ID, which may include duplicate records of the same root cause:
    ```bash
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" sync {slug} --probes
    ```
    This step invalidates the previous batch's reconciliation state, and reconciliation is not recorded yet.
-   Historical duplicate records retain their original IDs, evidence, and counts; when showing the number of distinct issues, group them by the same root cause and consequence and list the corresponding IDs, without raising severity due to duplication or substituting the displayed count for probe or reconciliation counts.
 
 4. **Reconciliation completeness check**:
    Derive the final counts automatically from the probe JSON:
@@ -129,6 +137,8 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 5. **Compile the report**:
 
    Fill in the review scope, explanation, fix suggestions, and limitations per the template; do not embed raw JSON in the body; when acceptance criteria are provided, complete the item-by-item check-off first.
+
+   Original records retain their IDs, evidence, and counts; when showing the number of distinct issues, group them by the same root cause and consequence and list the corresponding IDs, without raising severity due to duplication or substituting the displayed count for probe or reconciliation counts.
 
    Run the following commands to generate the report's facts section from the JSON, validate the display, and obtain the final answer summary:
    ```bash
