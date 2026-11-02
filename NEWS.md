@@ -10,14 +10,21 @@ and evaluation artifacts out of this file.
 
 ### Added
 
-- English and Chinese skill packages, with shared runtime scripts and an installer `--lang en|zh-CN` option. English is the default; install one language per project.
+- add English skill package and locale checks
+- add installer language selection
+- localize report labels and rule extraction
+- add shared scripts and bilingual skill package
 - add canonical review delivery summary
 
 ### Fixed
 
-- Added Bash 3.2 timestamp fallback and portable UTC dates; configurable project output/coverage policy, exclusive review initialization, and a macOS system-Bash CI job.
-
-- Corrected Chinese skill invocation examples; bilingual validation now checks prose/table rule IDs and complete report marker pairs, and rejects duplicate report-label keys.
+- probes: share evidence and coverage handoff boundaries
+- output-schema: classify confirmed behavioral defects as medium
+- behavior-review: add concurrency and async check matrix
+- make review runtime portable and project configurable
+- render false-positive finding status
+- preserve localized finding status punctuation
+- finish English rule documentation
 
 <!-- UNRELEASED:END -->
 
