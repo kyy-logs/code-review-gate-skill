@@ -29,7 +29,7 @@ A: continue writing the shared result; B also starts writing it.
 ```
 
 Failure: the guard admits a new task while the old task can still affect the same resource.
-Verify: the old task and relevant subtasks have terminated before releasing the guard, or actual task isolation prevents the effect. If the old task only performs isolated computation and can no longer write shared state, this conclusion does not directly apply.
+Verify: the old task and relevant subtasks have terminated before releasing the guard, or actual task isolation prevents the effect. Preventing the old task from publishing results only rules out the corresponding result-overwrite risk; whether busy/loading may be cleared still depends on that state's contract. Separately verify state accuracy and the conditions for admitting a new task.
 
 ## 3. Stale callbacks: an old request overwrites a new result
 
