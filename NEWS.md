@@ -10,6 +10,7 @@ and evaluation artifacts out of this file.
 
 ### Added
 
+- report: lead with conclusions and collapse finding evidence
 - add English skill package and locale checks
 - add installer language selection
 - localize report labels and rule extraction
