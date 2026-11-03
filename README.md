@@ -65,6 +65,8 @@ Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
   not a general recall claim. Concurrency-defect detection has not been
   validated.
 
+For the next stable release, update `VERSION` (for example, to `0.1.1`) and push it to `main`. After Validate skills succeeds, the release workflow generates NEWS from commits, updates the README release information, and publishes the version tag and GitHub Release. Existing releases are preserved; failed CI does not publish.
+
 ## Contents
 
 - [Latest news](#latest-news)
