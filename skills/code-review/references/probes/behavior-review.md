@@ -22,7 +22,7 @@ For the main paths affected by this change, check with the entry points, callers
 - Do conditional branches behave as expected, and are there inverted or missing branches? When routing changes, compare the actual paths for the same input before and after the change, and include pre-existing defects triggered by the new path in this round's checks.
 - Are state transitions allowed, and do side effects run under the correct conditions?
 - Are nulls, empty collections, and numeric boundaries handled correctly?
-- After an exception or partial failure, are state and resources handled correctly?
+- After an exception or partial failure, are state and resources handled correctly? For sequences involving databases, caches, messages, or external calls, check whether partial success, timeouts, or retries lead to inconsistent state or repeated side effects that violate the contract.
 
 Choose applicable check directions and concrete counterexamples for each behavior chain, and reason through them:
 
