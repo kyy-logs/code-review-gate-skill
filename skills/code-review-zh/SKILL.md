@@ -147,7 +147,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" summary {slug}
    ```
 
-   脚本只更新报告 §5、§6 的 `code-review:probes` / `gate` 标记区域，保留其他正文和原始 JSON。渲染先校验再原子更新，可重复执行；标记缺失或重复时停止。校验覆盖 ID、位置、证据、严重级别、状态和计数。
+   脚本只更新报告“发现的问题”和“审查结论”中的 `code-review:probes` / `gate` 标记区域，保留其他正文和原始 JSON。渲染先校验再原子更新，可重复执行；标记缺失或重复时停止。校验覆盖 ID、位置、证据、严重级别、状态和计数。
 
    `summary` 先校验报告，一致后才输出机器摘要。最终答复中的 high/medium/low 数量、finding ID 和阻塞结论须以摘要为准，不新增未记录的问题，不遗漏已记录的 high。向用户交付报告、阻塞项及未验证内容，可补充解释和建议，不得改写自动区域或推翻已知阻塞事实。
 

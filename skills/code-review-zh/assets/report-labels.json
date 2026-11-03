@@ -16,7 +16,7 @@
   "finding_status_reconciled": "已处置",
   "finding_status_wontfix": "明确不修",
   "finding_status_false_positive": "误报",
-  "finding_evidence": "- 原始证据：",
+  "finding_evidence": "代码依据与验证记录（展开）",
   "finding_reconciled_by": "- 处理说明：",
   "no_findings": "本轮没有记录 finding。",
   "reconcile_line": "reconciliation：total={total} / done={done} / pending={pending}",

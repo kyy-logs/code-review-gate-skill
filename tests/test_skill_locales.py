@@ -1,6 +1,7 @@
 """Structural consistency checks for the bilingual skill packages."""
 
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -26,6 +27,21 @@ class SkillLocaleTests(unittest.TestCase):
         ], capture_output=True, text=True, encoding='utf-8', timeout=30)
 
     def test_actual_package_structure_passes(self):
+        result = self.check()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_conclusion_first_report_layout_passes(self):
+        for name in ('code-review', 'code-review-zh'):
+            path = self.root / 'skills' / name / 'assets/code-review.md'
+            text = path.read_text(encoding='utf-8')
+            gate = re.search(
+                r'<!-- code-review:gate:start -->\n.*?\n<!-- code-review:gate:end -->',
+                text, re.S,
+            ).group(0)
+            text = text.replace(gate, '')
+            text = text.replace('<!-- code-review:probes:start -->',
+                                gate + '\n\n<!-- code-review:probes:start -->')
+            path.write_text(text, encoding='utf-8')
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 

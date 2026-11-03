@@ -219,14 +219,18 @@ def render_sections(summary, labels, policy=None):
     rows += ['', labels['findings_heading'], '']
     for item in summary['findings']:
         status = labels['finding_status_' + item['status'].replace('-', '_')]
-        rows += [f"#### [{item['severity']}] {markdown(item['summary'])}", '',
+        title, _, description = item['summary'].replace('\r\n', '\n').replace('\r', '\n').partition('\n')
+        rows += [f"#### [{item['severity']}] {markdown(title)}", '']
+        if description.strip():
+            rows += [markdown(description), '']
+        rows += [
                  labels['finding_id'] + markdown(item['id']),
                  labels['finding_location'] + markdown(item['location']),
-                 labels['finding_status'] + status + labels['finding_status_suffix'].format(status=item['status']),
-                 labels['finding_evidence'] + markdown(item['evidence'])]
+                 labels['finding_status'] + status + labels['finding_status_suffix'].format(status=item['status'])]
         if item.get('reconciled_by'):
             rows.append(labels['finding_reconciled_by'] + markdown(item['reconciled_by']))
-        rows.append('')
+        rows += ['', '<details>', '<summary>' + html.escape(labels['finding_evidence']) + '</summary>', '',
+                 markdown(item['evidence']), '', '</details>', '']
     if not summary['findings']:
         rows.append(labels['no_findings'])
     r = summary['reconcile']

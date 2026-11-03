@@ -12,13 +12,15 @@ finding 是一条具体问题；`severity` 表示严重程度，finding 的 `sta
 | `severity` | 必填 | `high` / `medium` / `low` | 见下方判定表 |
 | `status` | 必填 | `open` / `reconciled` / `wontfix` / `false-positive` | 见下方状态机 |
 | `location` | 必填 | `path:line` | 定位不到行时写到文件级，并说明原因 |
-| `summary` | 必填 | 一句话 | 说**是什么问题**，不是「建议优化」这类空话 |
+| `summary` | 必填 | 标题及简短说明 | 首行短标题，后续换行说明触发条件、实际与预期、已证实影响及修复建议；不重复详细取证过程 |
 | `evidence` | 必填 | 具体依据 | 引用规则 ID / 接口契约 / 代码路径 / 测试输出。**没有依据的不算 finding** |
 | `repro` | 选填 | 复核命令 | 如 `grep -n 'formatCents' src/…/Calculator.java`、`git show <head>:<path>`。仅限读取证据的命令，不得构建或运行测试 |
 | `reconciled_by` | 条件必填 | 处理说明 | `status=reconciled` 时填写：改在哪、为什么这样改 |
 | `reconcile_commit` | 选填 | commit id | 有对应处理提交时填写 |
 
 未提供的选填字段及不适用的条件字段可以省略，不必填写空字段。
+
+`summary` 仍为字符串，换行使用 JSON 的 `\n`；旧单行记录仍可渲染。证据完整保留，展示在每条问题最后，默认折叠；静态推演、未验证前提和契约争议须在可见说明中保留，不能只藏在证据里。
 
 每个探针将本轮记录保存为独立的 `probes/<探针名>.json`。例如：
 
@@ -41,7 +43,7 @@ finding 是一条具体问题；`severity` 表示严重程度，finding 的 `sta
 
 `probe`、`status`、`findings` 必填；`duration` 为非负整数秒，可省略，省略记 0。
 `skipped` / `error` 须另填非空 `reason`；无问题时显式写 `findings: []`，不虚构空记录。
-检查范围、限制和修复建议写入人类报告，机器 JSON 是唯一事实来源，不另抄完整 finding 或手填计数。
+检查范围、限制和补充建议写入人类报告；单条问题的说明及修复建议放在 `summary`。机器 JSON 是唯一事实来源，不另抄完整 finding 或手填计数。
 
 ## 2. 问题严重程度（severity 判定）
 

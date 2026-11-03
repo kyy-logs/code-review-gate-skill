@@ -24,8 +24,8 @@ PROBE_FIELDS = ('name', 'file', 'required', 'requires', 'params')
 RULE_HEADING = re.compile(r'^### ([A-Za-z][A-Za-z0-9._-]*) \[(HIGH|MEDIUM|LOW)\]', re.M)
 RULE_ID = re.compile(r'\b[A-Z][A-Z0-9]*(?:-[A-Z][A-Z0-9]*)*-\d{3}\b')
 MARKER = re.compile(r'<!-- code-review:([A-Za-z0-9_-]+):(start|end) -->')
-REPORT_MARKERS = [('probes', 'start'), ('probes', 'end'),
-                  ('gate', 'start'), ('gate', 'end')]
+REPORT_MARKERS = [('gate', 'start'), ('gate', 'end'),
+                  ('probes', 'start'), ('probes', 'end')]
 PATTERN = re.compile(r'`([^`]+)`')
 
 

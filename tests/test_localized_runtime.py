@@ -99,6 +99,49 @@ class LocalizedRuntimeTests(unittest.TestCase):
         report = (review / 'code-review.md').read_text(encoding='utf-8')
         self.assertIn('false positive (false-positive)', report)
 
+    def test_description_precedes_collapsed_evidence_and_preserves_facts(self):
+        for package in (EN, ZH):
+            skill, review = self.prepare(package)
+            path = review / 'probes/behavior-review.json'
+            record = json.loads(path.read_text(encoding='utf-8'))
+            record['status'] = 'passed'
+            item = record['findings'][0]
+            item.update(status='reconciled', reconciled_by='RESOLUTION',
+                        evidence='EVIDENCE </details>\n<script>unsafe</script>')
+            previous_summary = None
+            for value in ('TITLE', 'TITLE\r\nDESCRIPTION\nIMPACT\nFIX'):
+                with self.subTest(package=package.name, summary=value):
+                    item['summary'] = value
+                    path.write_text(json.dumps(record), encoding='utf-8')
+                    original = path.read_bytes()
+                    result = self.run_pipeline(skill, review, '--write-report')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    report_path = review / 'code-review.md'
+                    report = report_path.read_text(encoding='utf-8')
+                    self.assertIn('#### [high] TITLE\n', report)
+                    self.assertEqual(report.count('<details>'), 1)
+                    self.assertEqual(report.count('</details>'), 1)
+                    self.assertNotIn('<details open', report)
+                    self.assertLess(report.index('RESOLUTION'), report.index('<details>'))
+                    self.assertLess(report.index('<details>'), report.index('EVIDENCE'))
+                    self.assertNotIn('<script>', report)
+                    self.assertIn('&lt;/details&gt;', report)
+                    if '\n' in value:
+                        for content in ('DESCRIPTION', 'IMPACT', 'FIX'):
+                            self.assertLess(report.index(content), report.index('<details>'))
+                    result = self.run_pipeline(skill, review, '--check-report')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    result = self.run_pipeline(skill, review, '--summary')
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    if previous_summary is not None:
+                        self.assertEqual(result.stdout, previous_summary)
+                    previous_summary = result.stdout
+                    self.assertEqual(path.read_bytes(), original)
+                    self.assertEqual(self.run_pipeline(skill, review, '--write-report').returncode, 0)
+                    self.assertEqual(report_path.read_text(encoding='utf-8'), report)
+                    report_path.write_text(report.replace('EVIDENCE', 'TAMPERED'), encoding='utf-8')
+                    self.assertNotEqual(self.run_pipeline(skill, review, '--check-report').returncode, 0)
+
     def test_missing_label_is_an_error(self):
         skill, review = self.prepare(EN)
         labels_path = skill / 'assets/report-labels.json'

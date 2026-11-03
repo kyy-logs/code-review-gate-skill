@@ -12,13 +12,15 @@ A finding is one specific problem; `severity` indicates how serious it is, a fin
 | `severity` | Required | `high` / `medium` / `low` | See the criteria table below |
 | `status` | Required | `open` / `reconciled` / `wontfix` / `false-positive` | See the state machine below |
 | `location` | Required | `path:line` | When no line can be located, use the file level and explain why |
-| `summary` | Required | One sentence | Say **what the problem is**, not empty phrases like "consider optimizing" |
+| `summary` | Required | Title and brief explanation | First line: short title. Subsequent lines: trigger, actual versus expected behavior, supported impact, and fix suggestion; do not repeat detailed evidence |
 | `evidence` | Required | Concrete basis | Cite a rule ID / interface contract / code path / test output. **Anything without evidence is not a finding** |
 | `repro` | Optional | Verification command | E.g. `grep -n 'formatCents' src/…/Calculator.java`, `git show <head>:<path>`. Read-only evidence commands only; must not build or run tests |
 | `reconciled_by` | Conditionally required | Handling note | Fill in when `status=reconciled`: where it was changed and why |
 | `reconcile_commit` | Optional | commit id | Fill in when a corresponding handling commit exists |
 
 Optional fields not provided and conditional fields that do not apply may be omitted; empty fields need not be filled.
+
+`summary` remains a string; use JSON `\n` for line breaks. Legacy single-line records still render. Evidence is preserved in full at the end of each finding, collapsed by default. Keep static-reasoning status, unverified assumptions, and contract disputes visible in the explanation, not only in hidden evidence.
 
 Each probe saves this round's records as a standalone `probes/<probe-name>.json`. For example:
 
@@ -41,7 +43,7 @@ Each probe saves this round's records as a standalone `probes/<probe-name>.json`
 
 `probe`, `status`, and `findings` are required; `duration` is a non-negative integer in seconds and may be omitted, with omission recorded as 0.
 `skipped` / `error` must also include a non-empty `reason`; when there are no issues, explicitly write `findings: []` rather than inventing empty records.
-Checked scope, limitations, and fix suggestions go in the human report; the machine JSON is the single source of truth, so do not copy full findings or hand-fill counts elsewhere.
+Checked scope, limitations, and additional suggestions go in the human report; each finding's explanation and fix suggestion go in `summary`. The machine JSON is the single source of truth; do not copy full findings or hand-fill counts elsewhere.
 
 ## 2. Issue severity
 

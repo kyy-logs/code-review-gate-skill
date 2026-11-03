@@ -147,7 +147,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
    bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" summary {slug}
    ```
 
-   The scripts update only the `code-review:probes` / `gate` marker regions in report sections 5 and 6, preserving other body text and raw JSON. Rendering validates before an atomic update and can be repeated; it stops when markers are missing or duplicated. Validation covers IDs, locations, evidence, severity, status, and counts.
+   The scripts update only the `code-review:probes` / `gate` marker regions under Findings and Review Conclusion, preserving other body text and raw JSON. Rendering validates before an atomic update and can be repeated; it stops when markers are missing or duplicated. Validation covers IDs, locations, evidence, severity, status, and counts.
 
    `summary` validates the report first and outputs the machine summary only when it is consistent. The high/medium/low counts, finding IDs, and blocking conclusion in the final answer must follow the summary; do not add unrecorded issues or omit recorded high findings. Deliver the report, blocking items, and unverified content to the user; you may add explanations and suggestions, but must not rewrite the automatic regions or overturn known blocking facts.
 

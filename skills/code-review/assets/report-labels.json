@@ -16,7 +16,7 @@
   "finding_status_reconciled": "reconciled",
   "finding_status_wontfix": "wontfix",
   "finding_status_false_positive": "false positive",
-  "finding_evidence": "- Raw evidence: ",
+  "finding_evidence": "Code evidence and verification (expand)",
   "finding_reconciled_by": "- Resolution: ",
   "no_findings": "No findings were recorded in this run.",
   "reconcile_line": "reconciliation: total={total} / done={done} / pending={pending}",
