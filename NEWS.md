@@ -16,6 +16,10 @@ and evaluation artifacts out of this file.
 - add shared scripts and bilingual skill package
 - add canonical review delivery summary
 
+### Changed
+
+- probes: trim behavior-review evidence method
+
 ### Fixed
 
 - probes: share evidence and coverage handoff boundaries
