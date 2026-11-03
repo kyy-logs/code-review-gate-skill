@@ -4,7 +4,7 @@
 
 **基于证据的代码审查：优先静态分析，使用探针分工，并根据结果执行门禁。**
 
-技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前为 beta 测试版本，版本号见 [VERSION](VERSION)。
+技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.1.0`，版本号见 [VERSION](VERSION)。
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -18,46 +18,24 @@
 
 ## 最新动态
 
-### v0.1.0-beta.3（2026-10-31）
+### v0.1.0（2026-11-03）
 
-#### 移除
-
-- 移除独立 reviewer 及其 Claude Code/Codex 适配器。四探针直接根据原始 finding 生成报告和门禁；不再使用 `reviewer.json`、`review-mode` 或 reviewer 适配器安装。
-
-#### 调整
-
-- 安装器现在只安装宿主技能目录；`--agent` 只选择 Claude Code 或 Codex 的 skill 目录。
-
-### v0.1.0-beta.2（2026-10-31）
-
-#### 新增
-
-- 四探针并行执行：每个探针使用独立代理并写自己的 JSON；宿主没有四个并发槽位时分批执行，或记录串行回退。
-- 自动 NEWS 未发布更新和单命令远程 skill 安装。
-
-#### 调整
-
-- 探针派发加入本地搜索范围和后台任务收口约束；`behavior-review` 先从 diff 定位，证据足够时停止。
-- `test-coverage` 把有效覆盖率数据交回主执行器；跨探针重复问题暂时保留并计数，后续再评估去重。
-
-#### 修复
-
-- `behavior-review` 补充异步完成、异常和取消收尾路径检查，并区分取消通知与任务实际结束。
-
-#### 验证效果
-
-- 同版本审查中，四探针并行的墙钟更短：Keycloak 约 2.5 倍，x01 约 2.9 倍，x01 impact-only 重复约 2.7 倍。
-- token 没有稳定下降；目标召回也没有提升（x01 impact 目标在串行 3 次中命中 1 次、并行 3 次中命中 1 次）。样本很小，不构成通用提速或召回结论。
+- 首个正式版本：提供中英文技能包，以及 Claude Code / Codex 的语言选择安装。
+- 四探针直接生成 JSON 记录、可校验报告和门禁结论，不包含独立 reviewer。
+- 报告结论前置；问题先说明触发条件、实际与预期、影响及修法，完整证据放在最后并默认折叠。
+- 支持项目级产物目录和覆盖率配置，统一中英文运行脚本。
+- 完善行为链、并发与异步路径，以及断言、mock 和副作用的静态检查指引。
+- 本地 87 项离线测试通过；不据此宣称通用召回率、误报率或并发缺陷识别效果。
 
 [完整更新记录（英文）](NEWS.md)
 
 ## 发布状态
 
-`v0.1.0-beta.3` 为测试版本。在 1.0 之前，探针契约、报告结构和门禁行为可能调整。
+`v0.1.0` 是下述适用范围内的首个正式版本。1.0 之前的契约或格式变更会在 [NEWS](NEWS.md) 中说明。
 
 - **三级评级**：`high`、`medium`、`low`。此前四级版本写入的记录，包括包含 `critical` 值的记录，**不兼容**当前版本；`collect-metrics` 会拒绝这些记录。使用前请重新审查，或显式迁移记录。
 - **适用范围**：以静态分析为主，使用四个探针，以及从 JSON 派生的报告和门禁。不能替代测试、CI 或人工审查。
-- **验证情况**：74 项审查流程、NEWS、安装、双语与结构离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
+- **验证情况**：87 项审查流程、NEWS、安装、双语与结构离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
 
 ## 目录
 

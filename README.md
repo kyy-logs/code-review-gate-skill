@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current version is a beta release; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.1.0`; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -19,26 +19,40 @@ It never modifies the code under review.
 ## Latest news
 
 <!-- NEWS:START -->
-### v0.1.0-beta.3 (2026-10-31)
+### v0.1.0 (2026-11-03)
 
-#### Removed
+#### Added
 
-- Removed the independent reviewer and its Claude Code/Codex adapters. The four
-  probes now feed the report and gate directly from raw findings; `reviewer.json`,
-  `review-mode`, and reviewer-adapter installation are no longer used.
+- English and Chinese skill packages with shared runtime scripts and language-selectable installation for Claude Code and Codex.
+- A canonical JSON-derived delivery summary, with report validation before gate decisions.
+- Readable review reports: conclusions first, explanatory finding descriptions and fix suggestions, with full evidence collapsed at the end of each finding.
 
 #### Changed
 
-- The installer now installs only the host skill layout. `--agent` selects the
-  Claude Code or Codex skill directory, not a reviewer adapter.
+- Organized behavior checks around changed paths, shared-state transitions, and applicable concurrency or async scenarios; reuse evidence and stop when the specific question is resolved.
+- Clarified shared search boundaries, dependency evidence handoff, and test coverage measurement handoff.
+- Strengthened static test-quality guidance for assertions, mocks, exceptions, and observable side effects.
+
+#### Fixed
+
+- Portable runtime execution and project-level output and coverage configuration.
+- Localized report labels, rule extraction, and false-positive status rendering.
+- Severity guidance for confirmed local behavioral defects and unresolved contract conflicts.
+
+#### Validation and scope
+
+- 87 offline tests passed locally with Bash enabled, covering installation, bilingual structure, JSON records, report rendering, and gates.
+- Static-first review with four probes; no independent reviewer.
+- This release does not establish general defect recall, false-positive rates, or reliable concurrency-defect detection. Tests, CI, and human review remain necessary.
+- Earlier four-level records containing critical are incompatible; re-review or migrate explicitly.
 
 [Full update history](NEWS.md)
 <!-- NEWS:END -->
 
 ## Release status
 
-`v0.1.0-beta.3` — this is a test release. The probe contract, report schema, and
-gate behavior may change before 1.0.
+`v0.1.0` is the first stable release within the scope described below.
+Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
 
 - **Severity is three levels:** `high`, `medium`, `low`. Records written by the
   earlier four-level version, including any `critical` value, are **not
@@ -46,7 +60,7 @@ gate behavior may change before 1.0.
   records before using them with this release.
 - **Scope:** static-first review with four probes and JSON-derived report/gate
   output. It does not replace tests, CI, or human review.
-- **Validation:** 74 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
+- **Validation:** 87 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
   end-to-end gate runs; additional probe smokes. These are regression checks,
   not a general recall claim. Concurrency-defect detection has not been
   validated.

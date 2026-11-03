@@ -8,30 +8,36 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
+_No user-facing changes since the latest release._
+
+<!-- UNRELEASED:END -->
+
+## v0.1.0 (2026-11-03)
+
 ### Added
 
-- report: lead with conclusions and collapse finding evidence
-- add English skill package and locale checks
-- add installer language selection
-- localize report labels and rule extraction
-- add shared scripts and bilingual skill package
-- add canonical review delivery summary
+- English and Chinese skill packages with shared runtime scripts and language-selectable installation for Claude Code and Codex.
+- A canonical JSON-derived delivery summary, with report validation before gate decisions.
+- Readable review reports: conclusions first, explanatory finding descriptions and fix suggestions, with full evidence collapsed at the end of each finding.
 
 ### Changed
 
-- probes: trim behavior-review evidence method
+- Organized behavior checks around changed paths, shared-state transitions, and applicable concurrency or async scenarios; reuse evidence and stop when the specific question is resolved.
+- Clarified shared search boundaries, dependency evidence handoff, and test coverage measurement handoff.
+- Strengthened static test-quality guidance for assertions, mocks, exceptions, and observable side effects.
 
 ### Fixed
 
-- probes: share evidence and coverage handoff boundaries
-- output-schema: classify confirmed behavioral defects as medium
-- behavior-review: add concurrency and async check matrix
-- make review runtime portable and project configurable
-- render false-positive finding status
-- preserve localized finding status punctuation
-- finish English rule documentation
+- Portable runtime execution and project-level output and coverage configuration.
+- Localized report labels, rule extraction, and false-positive status rendering.
+- Severity guidance for confirmed local behavioral defects and unresolved contract conflicts.
 
-<!-- UNRELEASED:END -->
+### Validation and scope
+
+- 87 offline tests passed locally with Bash enabled, covering installation, bilingual structure, JSON records, report rendering, and gates.
+- Static-first review with four probes; no independent reviewer.
+- This release does not establish general defect recall, false-positive rates, or reliable concurrency-defect detection. Tests, CI, and human review remain necessary.
+- Earlier four-level records containing critical are incompatible; re-review or migrate explicitly.
 
 ## v0.1.0-beta.3 (2026-10-31)
 
