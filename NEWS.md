@@ -10,7 +10,12 @@ and evaluation artifacts out of this file.
 
 ### Added
 
+- code-review: surface unverified items and tighten behavior checks
 - release: publish stable versions after validated VERSION changes
+
+### Fixed
+
+- code-review: return immediately after saving probe JSON
 
 <!-- UNRELEASED:END -->
 
