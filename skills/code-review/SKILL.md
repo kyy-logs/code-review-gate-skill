@@ -98,10 +98,10 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
    Expand the scope only for a specific evidence gap; avoid searching the whole repository with `grep -r` and then filtering the output. Record missing or unreadable evidence without expanding to the disk root or user directory, or repeating searches without a new lead.
 
    Write only `{output_root}/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics. Save identified but unresolved specific concerns in `unverified_items` under the output contract, rather than only in the return message.
-   Before returning, wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited, then report completion.
+   Once checks are complete, first wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited. Then validate against the output contract, save the final JSON, and immediately return the handoff message. After saving, do not search, gather more evidence, or repeat explanations of findings.
 
    **Handoff**: every probe must have JSON for this run. Record skip or error reasons according to the output contract; on execution errors, preserve findings already made and let the other probes continue. If an agent fails to start or returns no valid result, the main executor records `error` and the reason without reusing old results.
-   The return message briefly states the JSON path, the actual checked scope, unverified items, and specific evidence gaps, without repeating the findings; the main executor incorporates the relevant limitations into the final report.
+   The return message only briefly states the JSON path, the actual checked scope, and necessary limitations, including specific evidence gaps; the main executor incorporates the relevant limitations into the final report.
    Record `duration` when reliable timing is available; the sum of per-probe durations does not represent this round's wall-clock time.
    `test-coverage` hands off the report path, target version, numerator/denominator, and percentage for valid coverage via its return message,
    and the main executor reports them; `--line` accepts only diff line coverage:
