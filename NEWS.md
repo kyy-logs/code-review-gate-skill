@@ -8,6 +8,12 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
+_No user-facing changes since the latest release._
+
+<!-- UNRELEASED:END -->
+
+## v0.1.1 (2026-11-05)
+
 ### Added
 
 - code-review: surface unverified items and tighten behavior checks
@@ -16,8 +22,6 @@ and evaluation artifacts out of this file.
 ### Fixed
 
 - code-review: return immediately after saving probe JSON
-
-<!-- UNRELEASED:END -->
 
 ## v0.1.0 (2026-11-03)
 

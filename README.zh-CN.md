@@ -4,7 +4,7 @@
 
 **基于证据的代码审查：优先静态分析，使用探针分工，并根据结果执行门禁。**
 
-技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.1.0`，版本号见 [VERSION](VERSION)。
+技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.1.1`，版本号见 [VERSION](VERSION)。
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -18,20 +18,13 @@
 
 ## 最新动态
 
-### v0.1.0（2026-11-03）
+### v0.1.1（2026-11-05）
 
-- 首个正式版本：提供中英文技能包，以及 Claude Code / Codex 的语言选择安装。
-- 四探针直接生成 JSON 记录、可校验报告和门禁结论，不包含独立 reviewer。
-- 报告结论前置；问题先说明触发条件、实际与预期、影响及修法，完整证据放在最后并默认折叠。
-- 支持项目级产物目录和覆盖率配置，统一中英文运行脚本。
-- 完善行为链、并发与异步路径，以及断言、mock 和副作用的静态检查指引。
-- 本地 87 项离线测试通过；不据此宣称通用召回率、误报率或并发缺陷识别效果。
-
-[完整更新记录（英文）](NEWS.md)
+本版本更新根据提交记录自动整理，详见 [NEWS](NEWS.md) 和 [Release](https://github.com/kyy-logs/code-review-skill/releases/tag/v0.1.1)。
 
 ## 发布状态
 
-`v0.1.0` 是下述适用范围内的首个正式版本。1.0 之前的契约或格式变更会在 [NEWS](NEWS.md) 中说明。
+`v0.1.1` 是下述适用范围内的正式版本。1.0 之前的契约或格式变更会在 [NEWS](NEWS.md) 中说明。
 
 - **三级评级**：`high`、`medium`、`low`。此前四级版本写入的记录，包括包含 `critical` 值的记录，**不兼容**当前版本；`collect-metrics` 会拒绝这些记录。使用前请重新审查，或显式迁移记录。
 - **适用范围**：以静态分析为主，使用四个探针，以及从 JSON 派生的报告和门禁。不能替代测试、CI 或人工审查。

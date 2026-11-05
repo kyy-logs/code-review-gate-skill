@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.1.0`; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.1.1`; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -19,39 +19,23 @@ It never modifies the code under review.
 ## Latest news
 
 <!-- NEWS:START -->
-### v0.1.0 (2026-11-03)
+### v0.1.1 (2026-11-05)
 
 #### Added
 
-- English and Chinese skill packages with shared runtime scripts and language-selectable installation for Claude Code and Codex.
-- A canonical JSON-derived delivery summary, with report validation before gate decisions.
-- Readable review reports: conclusions first, explanatory finding descriptions and fix suggestions, with full evidence collapsed at the end of each finding.
-
-#### Changed
-
-- Organized behavior checks around changed paths, shared-state transitions, and applicable concurrency or async scenarios; reuse evidence and stop when the specific question is resolved.
-- Clarified shared search boundaries, dependency evidence handoff, and test coverage measurement handoff.
-- Strengthened static test-quality guidance for assertions, mocks, exceptions, and observable side effects.
+- code-review: surface unverified items and tighten behavior checks
+- release: publish stable versions after validated VERSION changes
 
 #### Fixed
 
-- Portable runtime execution and project-level output and coverage configuration.
-- Localized report labels, rule extraction, and false-positive status rendering.
-- Severity guidance for confirmed local behavioral defects and unresolved contract conflicts.
-
-#### Validation and scope
-
-- 87 offline tests passed locally with Bash enabled, covering installation, bilingual structure, JSON records, report rendering, and gates.
-- Static-first review with four probes; no independent reviewer.
-- This release does not establish general defect recall, false-positive rates, or reliable concurrency-defect detection. Tests, CI, and human review remain necessary.
-- Earlier four-level records containing critical are incompatible; re-review or migrate explicitly.
+- code-review: return immediately after saving probe JSON
 
 [Full update history](NEWS.md)
 <!-- NEWS:END -->
 
 ## Release status
 
-`v0.1.0` is the first stable release within the scope described below.
+`v0.1.1` is a stable release within the scope described below.
 Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
 
 - **Severity is three levels:** `high`, `medium`, `low`. Records written by the
