@@ -37,5 +37,10 @@
   "summary_clear": "无已记录阻塞项",
   "summary_none": "none",
   "finding_status_suffix": "（{status}）",
-  "coverage_policy": "覆盖率策略：增量行覆盖率 ≥ {line_target}%；分支目标 {branch_target}%（仅提示）。"
+  "coverage_policy": "覆盖率策略：增量行覆盖率 ≥ {line_target}%；分支目标 {branch_target}%（仅提示）。",
+  "unverified_status": "待确认",
+  "unverified_probe": "- 来源探针：",
+  "unverified_reason": "- 未决原因：",
+  "unverified_needed_evidence": "- 待确认依据：",
+  "summary_unverified": "unverified_items: {count}（见发现的问题，不计入严重级别数量）"
 }

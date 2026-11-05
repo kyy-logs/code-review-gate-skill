@@ -94,10 +94,10 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
    Reuse the review scope and material confirmed and handed off by the main executor, together with context already read by this agent.
    Read more as needed; merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
-   Local search is limited to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates; when something is missing or unreadable, record the specific evidence gap,
-   without expanding to the disk root or the user directory, and without repeating searches when there is no new lead.
+   Limit local searches to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates. Prefer `rg`, starting with changed files and known relevant directories and narrowing by file type; return only paths when locating files.
+   Expand the scope only for a specific evidence gap; avoid searching the whole repository with `grep -r` and then filtering the output. Record missing or unreadable evidence without expanding to the disk root or user directory, or repeating searches without a new lead.
 
-   Write only `{output_root}/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics.
+   Write only `{output_root}/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics. Save identified but unresolved specific concerns in `unverified_items` under the output contract, rather than only in the return message.
    Before returning, wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited, then report completion.
 
    **Handoff**: every probe must have JSON for this run. Record skip or error reasons according to the output contract; on execution errors, preserve findings already made and let the other probes continue. If an agent fails to start or returns no valid result, the main executor records `error` and the reason without reusing old results.
@@ -138,7 +138,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
    Fill in the review scope, explanation, fix suggestions, and limitations per the template; do not embed raw JSON in the body; when acceptance criteria are provided, complete the item-by-item check-off first.
 
-   Original records retain their IDs, evidence, and counts; when showing the number of distinct issues, group them by the same root cause and consequence and list the corresponding IDs, without raising severity due to duplication or substituting the displayed count for probe or reconciliation counts.
+   The script displays `unverified_items` as "Pending confirmation" in Findings without including them in severity counts; original records retain their IDs, evidence, and counts; when showing the number of distinct issues, group them by the same root cause and consequence and list the corresponding IDs, without raising severity due to duplication or substituting the displayed count for probe or reconciliation counts.
 
    Run the following commands to generate the report's facts section from the JSON, validate the display, and obtain the final answer summary:
    ```bash

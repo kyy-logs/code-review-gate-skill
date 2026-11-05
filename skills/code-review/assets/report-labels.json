@@ -37,5 +37,10 @@
   "summary_clear": "no recorded blockers",
   "summary_none": "none",
   "finding_status_suffix": " ({status})",
-  "coverage_policy": "Coverage policy: line >= {line_target}%; branch target {branch_target}% (advisory)."
+  "coverage_policy": "Coverage policy: line >= {line_target}%; branch target {branch_target}% (advisory).",
+  "unverified_status": "Pending confirmation",
+  "unverified_probe": "- Probe: ",
+  "unverified_reason": "- Why unresolved: ",
+  "unverified_needed_evidence": "- Needed to resolve: ",
+  "summary_unverified": "unverified_items: {count} (see Findings; not included in severity counts)"
 }

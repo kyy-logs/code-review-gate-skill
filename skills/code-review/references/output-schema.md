@@ -43,7 +43,19 @@ Each probe saves this round's records as a standalone `probes/<probe-name>.json`
 
 `probe`, `status`, and `findings` are required; `duration` is a non-negative integer in seconds and may be omitted, with omission recorded as 0.
 `skipped` / `error` must also include a non-empty `reason`; when there are no issues, explicitly write `findings: []` rather than inventing empty records.
-Checked scope, limitations, and additional suggestions go in the human report; each finding's explanation and fix suggestion go in `summary`. The machine JSON is the single source of truth; do not copy full findings or hand-fill counts elsewhere.
+Checked scope, general execution limitations, and additional suggestions go in the human report; each finding's explanation and fix suggestion go in `summary`. The machine JSON is the single source of truth; do not copy full findings or hand-fill counts elsewhere.
+
+**Pending confirmation**: when a specific concern has been identified but a contract, reachability, or evidence gap prevents confirming a defect, save it in the probe's optional top-level `unverified_items` array rather than only in the return message. Each item contains only these four non-empty strings:
+
+| Field | Content |
+|---|---|
+| `location` | Source location, preferably `path:line` |
+| `summary` | Title, observed behavior, and possible consequences; distinguish facts from inference |
+| `reason` | The specific reason confirmation is pending; for contract conflicts, cite both sides |
+| `needed_evidence` | Evidence or a product decision needed to resolve the concern |
+
+Omit the field or use `[]` when there are no such concerns; legacy JSON remains valid. Do not turn general limitations such as tests not run into individual pending items, or duplicate a concern already explained in a finding. Proven defects still belong in `findings`; this field must not bypass grading.
+The script displays these items beside high / medium / low in the report's Findings section, labeled "Pending confirmation", with their source probe. They have no severity or handling status, do not enter defect counts or reconciliation, and do not directly change probe status or gates; malformed records still fail validation.
 
 ## 2. Issue severity
 
@@ -76,7 +88,7 @@ When a boundary error is proven, unverified downstream UI / templates / integrat
 **3. Handling contract conflicts**
 
 When contracts, docs, or tests conflict, list both sides' bases in `evidence`. Only evidence that applies to the target version and explains the conflict can resolve it; "probably a typo / copy-paste / old comment" does not count as evidence.
-If the judgment depends on an unresolved conflict, record it as an unverified item; if kept as a finding, the maximum is `medium`, and the summary notes "contract to be confirmed". Other issues with independent, sufficient evidence are graded as usual.
+If the judgment depends on an unresolved conflict, save it in `unverified_items`; if kept as a finding instead, do not duplicate it, the maximum is `medium`, and the summary notes "contract to be confirmed". Other issues with independent, sufficient evidence are graded as usual.
 `unverified` is not a finding severity or status.
 
 ### Combined risk and test gaps

@@ -20,7 +20,7 @@ Key verification limitations: ____ (details in section 3; write "None" if none).
 ## 2. Findings
 
 <!-- code-review:probes:start -->
-Filled in by the script with the probe summary and issue details.
+Filled in by the script with the probe summary, issue details, and items pending confirmation.
 <!-- code-review:probes:end -->
 
 Additional suggestions (if any): reference finding IDs and add only guidance not already included in the finding details; omit when none.

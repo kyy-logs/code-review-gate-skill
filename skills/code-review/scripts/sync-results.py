@@ -31,6 +31,8 @@ LABEL_KEYS = frozenset({
     'summary_high_ids', 'summary_medium_ids', 'summary_low_ids',
     'summary_reconcile', 'summary_required_failed', 'summary_status',
     'summary_blocked', 'summary_clear', 'summary_none',
+    'unverified_status', 'unverified_probe', 'unverified_reason',
+    'unverified_needed_evidence', 'summary_unverified',
 })
 
 
@@ -163,10 +165,10 @@ def read_probes(directory, configuration):
     expected = {name + '.json' for name in configuration}
     actual = {p.name for p in probe_dir.glob('*.json')}
     require(actual == expected, f'探针报告清单不匹配: 缺少 {expected - actual}; 未注册 {actual - expected}')
-    summaries, findings = [], {}
+    summaries, findings, unverified_items = [], {}, []
     for name, required in configuration.items():
         block = load_record(probe_dir / (name + '.json'))
-        fields(block, ('probe', 'status', 'findings'), ('duration', 'reason'), name)
+        fields(block, ('probe', 'status', 'findings'), ('duration', 'reason', 'unverified_items'), name)
         require(block['probe'] == name, f'{name}: 报告 probe 不匹配')
         require(block['status'] in ('passed', 'failed', 'skipped', 'error'), f'{name}: 非法执行状态')
         duration = block.get('duration', 0)
@@ -176,6 +178,14 @@ def read_probes(directory, configuration):
             text(block.get('reason'), f'{name}.reason')
         elif 'reason' in block:
             text(block['reason'], f'{name}.reason')
+        pending_items = block.get('unverified_items', [])
+        require(isinstance(pending_items, list), f'{name}: unverified_items 必须为数组')
+        for item in pending_items:
+            keys = ('location', 'summary', 'reason', 'needed_evidence')
+            fields(item, keys, (), f'{name}.unverified_items')
+            for key in keys:
+                text(item[key], f'{name}.unverified_items.{key}')
+            unverified_items.append(dict(probe=name, **deepcopy(item)))
         counts = Counter()
         open_high = 0
         for raw in block['findings']:
@@ -189,17 +199,18 @@ def read_probes(directory, configuration):
         require(block['status'] != 'failed' or open_high, f'{name}: failed 缺少 open high')
         summaries.append(dict(name=name, required=required, status=block['status'], duration=duration, reason=block.get('reason', ''),
                               **{severity: counts[severity] for severity in SEVERITIES}))
-    return summaries, findings
+    return summaries, findings, unverified_items
 
 
 def summarize(directory, configuration, probes_only=False):
-    probes, findings = read_probes(directory, registry(configuration))
+    probes, findings, unverified_items = read_probes(directory, registry(configuration))
     reconciliation = None
     if not probes_only:
         severe = [item for item in findings.values() if item['severity'] == 'high']
         done = sum(item['status'] in ('reconciled', 'false-positive') for item in severe)
         reconciliation = dict(total=len(severe), done=done, pending=len(severe) - done)
-    return dict(probes=probes, reconcile=reconciliation, findings=list(findings.values()))
+    return dict(probes=probes, reconcile=reconciliation, findings=list(findings.values()),
+                unverified_items=unverified_items)
 
 
 def markdown(value):
@@ -231,7 +242,18 @@ def render_sections(summary, labels, policy=None):
             rows.append(labels['finding_reconciled_by'] + markdown(item['reconciled_by']))
         rows += ['', '<details>', '<summary>' + html.escape(labels['finding_evidence']) + '</summary>', '',
                  markdown(item['evidence']), '', '</details>', '']
-    if not summary['findings']:
+    for item in summary['unverified_items']:
+        title, _, description = item['summary'].replace('\r\n', '\n').replace('\r', '\n').partition('\n')
+        rows += [f"#### [{labels['unverified_status']}] {markdown(title)}", '']
+        if description.strip():
+            rows += [markdown(description), '']
+        rows += [
+            labels['unverified_probe'] + markdown(item['probe']),
+            labels['finding_location'] + markdown(item['location']),
+            labels['unverified_reason'] + markdown(item['reason']),
+            labels['unverified_needed_evidence'] + markdown(item['needed_evidence']), '',
+        ]
+    if not summary['findings'] and not summary['unverified_items']:
         rows.append(labels['no_findings'])
     r = summary['reconcile']
     rows += ['', labels['reconcile_line'].format(**r)]
@@ -264,6 +286,7 @@ def summary_text(summary, labels):
         labels['summary_high_ids'] + (', '.join(by_severity['high']) or '-'),
         labels['summary_medium_ids'] + (', '.join(by_severity['medium']) or '-'),
         labels['summary_low_ids'] + (', '.join(by_severity['low']) or '-'),
+        labels['summary_unverified'].format(count=len(summary['unverified_items'])),
         labels['summary_reconcile'].format(**reconcile),
         labels['summary_required_failed'] + (', '.join(required_failed) or labels['summary_none']),
         labels['summary_status'] + (labels['summary_blocked'] if blocked else labels['summary_clear']),
