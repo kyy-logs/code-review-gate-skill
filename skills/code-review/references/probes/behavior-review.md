@@ -55,7 +55,6 @@ Check records uniformly state:
 **handling point location → trigger conditions and specific input → expected behavior and basis → relevant code path → actual behavior and consequence**.
 
 Once the main paths have these judgments, reuse the records to assemble and write the probe JSON. Do not routinely expand dependencies or recheck judged paths while finishing. If new evidence, a concrete counterexample, or contradictory evidence could change a conclusion, return to the relevant chain for evidence gathering.
-Save specific concerns that cannot yet be confirmed as defects in `unverified_items` under the output contract. In the return message, use the existing "actual check scope" to briefly state checked paths and other scope limitations; the return message does not replace JSON records.
 
 Confirmed issues go into the finding's `evidence`; grading and contract-conflict handling follow the [output contract](../output-schema.md).
 Record different root causes or consequences separately; do not merge them to evade grading. Save issues that depend on unresolved contract conflicts in `unverified_items` when no finding is created.

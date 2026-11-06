@@ -21,7 +21,6 @@ The review scope and code version follow "Determine the review scope" in the mai
    `bash "$CODE_REVIEW_SKILL_DIR/scripts/rule-grep"`.
    The script scans the full file text, and hits may include old code.
 3. **AI review**: with the corresponding rule, code context, and this round's diff, confirm whether a violation actually exists.
-   Include only issues introduced or triggered by this change in the findings; record unrelated old issues separately and exclude them from this round's counts.
 
 Rules that cannot be decided by pattern go to section 3.
 When on-disk files differ from the review target version, read the target version's source and perform the AI semantic check per section 3.
