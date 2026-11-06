@@ -238,6 +238,50 @@ class ReviewSnapshotTests(SnapshotFixture, unittest.TestCase):
         self.assertEqual(result.returncode, 3, result.stderr)
         self.assertIn('stale-review', result.stderr)
 
+    def test_uninitialized_submodule_uses_indexed_commit(self):
+        sub = self.root / 'vendor/lib'
+        sub.mkdir(parents=True)
+        self.git('update-index', '--add', '--cacheinfo', f'160000,{self.c1},vendor/lib')
+        self.init('submodule-demo')
+        snapshot = json.loads((self.review / 'review-snapshot.json').read_text(encoding='utf-8'))
+        entry = next(item for item in snapshot['files'] if item['path'] == 'vendor/lib')
+        # The empty submodule directory must not resolve to the superproject HEAD
+        # (self.c2, the current HEAD); the index gitlink is the reviewed target.
+        self.assertEqual(entry['gitlink'], self.c1)
+
+    def test_tracked_file_replaced_by_directory_is_hashed(self):
+        (self.root / 'src/node').write_text('file\n', encoding='utf-8')
+        self.git('add', 'src/node')
+        self.git('commit', '-qm', 'node')
+        (self.root / 'src/node').unlink()
+        (self.root / 'src/node').mkdir()
+        (self.root / 'src/node/child.txt').write_text('child\n', encoding='utf-8')
+        self.prepare()
+        snapshot = json.loads((self.review / 'review-snapshot.json').read_text(encoding='utf-8'))
+        entry = next(item for item in snapshot['files'] if item['path'] == 'src/node')
+        self.assertIsNotNone(entry['sha256'])
+        (self.root / 'src/node/child.txt').unlink()
+        result = self.gate()
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertIn('stale-review', result.stderr)
+
+    def test_staging_unchanged_rename_keeps_snapshot_fresh(self):
+        (self.root / 'src/app.py').rename(self.root / 'src/app2.py')
+        self.prepare()
+        self.git('add', '-A', 'src')
+        result = self.gate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.gate_events(), 1)
+
+    def test_remint_switching_mode_drops_commits_head_ref(self):
+        self.git('branch', 'feature', self.c2)
+        self.prepare('mode-switch', mode='commits', base=self.c1, head='feature')
+        result = self.command('snapshot', 'mode-switch', '--mode', 'worktree')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        snapshot = json.loads((self.review / 'review-snapshot.json').read_text(encoding='utf-8'))
+        self.assertEqual(snapshot['mode'], 'worktree')
+        self.assertIsNone(snapshot['head_ref'])
+
     def test_commits_mode_detects_base_ref_move(self):
         self.git('branch', 'base-branch', self.c1)
         self.git('branch', 'feature', self.c2)

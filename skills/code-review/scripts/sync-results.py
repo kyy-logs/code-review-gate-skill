@@ -130,7 +130,11 @@ def split_paths(data):
 
 
 def changed_paths(project, base):
-    return split_paths(git_run(project, 'diff', '--relative', '--name-only', '-z', base, '--'))
+    # Disable rename detection: --name-only would report only the destination.
+    # An unstaged rename is then "old deleted + new untracked"; once staged it
+    # must keep producing the same path set, or unchanged content reports stale.
+    return split_paths(git_run(project, 'diff', '--relative', '--name-only', '--no-renames',
+                               '-z', base, '--'))
 
 
 def untracked_paths(project):
@@ -157,19 +161,50 @@ def hash_file(path):
     return digest.hexdigest()
 
 
+def directory_digest(root):
+    """Hash a directory tree deterministically without following symlinks."""
+    digest = hashlib.sha256(b'directory\0')
+
+    def walk(directory, prefix):
+        for entry in sorted(os.scandir(directory), key=lambda item: item.name):
+            if entry.name == '.git':
+                continue
+            relative = prefix + entry.name
+            if entry.is_symlink():
+                digest.update(b'L\0' + os.fsencode(relative) + b'\0'
+                              + os.fsencode(os.readlink(entry.path)) + b'\0')
+            elif entry.is_dir(follow_symlinks=False):
+                digest.update(b'D\0' + os.fsencode(relative) + b'\0')
+                walk(entry.path, relative + '/')
+            elif entry.is_file(follow_symlinks=False):
+                digest.update(b'F\0' + os.fsencode(relative) + b'\0'
+                              + hash_file(entry.path).encode('ascii') + b'\0')
+            else:
+                digest.update(b'O\0' + os.fsencode(relative) + b'\0')
+
+    walk(root, '')
+    return digest.hexdigest()
+
+
 def file_digest(project, relative):
     path = Path(project) / relative
     if path.is_symlink():
         return hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()
     if not path.exists():
         return None
+    if path.is_dir():
+        # A tracked file can be replaced by a directory in the worktree.
+        return directory_digest(path)
     require(path.is_file(), f'不支持的审查输入: {relative}')
     return hash_file(path)
 
 
 def checkout_gitlink(project, relative):
     path = Path(project) / relative
-    if not path.is_dir():
+    # Require the directory itself to be a repository root. Without this, an
+    # empty or uninitialized submodule makes git discover the superproject and
+    # return its HEAD as if it were the submodule's commit.
+    if not path.is_dir() or not (path / '.git').exists():
         return None
     try:
         return git_run(path, 'rev-parse', '--verify', 'HEAD').decode('ascii').strip()
@@ -343,9 +378,12 @@ def remint_snapshot(directory, project, configuration, mode=None, base=None, hea
     old = read_snapshot(directory) if (directory / SNAPSHOT_NAME).is_file() else None
     if old is not None:
         mode = mode or old['mode']
-        # Worktree remint keeps the original base commit so committed fixes stay in scope.
-        base = base or (old['base'] if old['mode'] == 'worktree' else old['base_ref'])
-        head = head or old['head_ref']
+        # Inherit refs only when the mode is unchanged; a commits run's head_ref
+        # is not valid in worktree mode. After a mode switch, defaults apply.
+        if mode == old['mode']:
+            # Worktree remint keeps the original base commit so committed fixes stay in scope.
+            base = base or (old['base'] if mode == 'worktree' else old['base_ref'])
+            head = head or old['head_ref']
         excludes = old['excludes']
     else:
         require(mode is not None, '缺少 --mode；旧 run 重铸快照需要指定 worktree 或 commits')

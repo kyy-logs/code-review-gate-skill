@@ -44,7 +44,7 @@ Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
   records before using them with this release.
 - **Scope:** static-first review with four probes and JSON-derived report/gate
   output. It does not replace tests, CI, or human review.
-- **Validation:** 112 offline pipeline, NEWS, installation, bilingual, locale, and source-freshness tests; clean-project
+- **Validation:** 116 offline pipeline, NEWS, installation, bilingual, locale, and source-freshness tests; clean-project
   end-to-end gate runs; additional probe smokes. These are regression checks,
   not a general recall claim. Concurrency-defect detection has not been
   validated.
