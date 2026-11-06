@@ -2,6 +2,8 @@
 
 **required: false** ｜ **requires: []**
 
+先读 [`common.md`](common.md)；它定义了所有探针共同遵守的约束。
+
 检查本次改动对调用方、契约、性能和架构的影响。
 
 ## 1. 被改动方法的 inbound 调用方（fan-in）

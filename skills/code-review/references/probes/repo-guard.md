@@ -2,6 +2,8 @@
 
 **required: true** | **requires: rules** | `read_only: true`
 
+Read [`common.md`](common.md) first; it defines the constraints shared by all probes.
+
 ## 1. Select the rule pack
 
 1. When `$CODE_REVIEW_RULES_DIR` is non-empty, use the specified path; if the path does not exist or is unreadable, record `error` and do not fall back.

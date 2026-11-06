@@ -2,6 +2,8 @@
 
 **required: true** | **requires: []**
 
+Read [`common.md`](common.md) first; it defines the constraints shared by all probes.
+
 Check behavioral defects introduced or triggered by this change. The review scope and source version follow "Determine the review scope" in `SKILL.md`;
 it does not depend on rule packs and is not limited by the language extensions scanned for rules.
 Trace actual call chains as needed, unconstrained by the single-level fan-in of `impact-analysis`; not finding a caller does not by itself prove the internal logic correct or incorrect.

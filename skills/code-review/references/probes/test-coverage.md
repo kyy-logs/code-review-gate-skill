@@ -2,6 +2,8 @@
 
 **required: true** | **requires: []**
 
+Read [`common.md`](common.md) first; it defines the constraints shared by all probes.
+
 Each round, the AI checks the quality of the relevant tests; coverage is an optional sub-item.
 Tests need not be run, nor coverage measured, every round.
 

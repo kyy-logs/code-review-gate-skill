@@ -2,6 +2,8 @@
 
 **required: true** ｜ **requires: rules** ｜ `read_only: true`
 
+先读 [`common.md`](common.md)；它定义了所有探针共同遵守的约束。
+
 ## 1. 选择规则包
 
 1. `$CODE_REVIEW_RULES_DIR` 非空时，使用指定路径；路径不存在或不可读时记为 `error`，不回退。
