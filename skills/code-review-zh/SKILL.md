@@ -67,13 +67,17 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 
    收集完成后执行以下命令初始化本轮目录和报告，避免将产物纳入被审范围：
    ```bash
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug}
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug} --mode worktree
+   # 或：init {slug} --mode commits --base {base} --head {head}
    ```
-   返回 JSON 给出实际 `review_dir`、`output_dir`、`line_target` 和 `branch_target`。
+   返回 JSON 给出实际 `review_dir`、`output_dir`、`line_target`、`branch_target` 和 `snapshot_id`。
+   带 `--mode` 时 init 同时写入 `review-snapshot.json`，钉住本轮审查源码（worktree 文件哈希，或固定的 base/head 提交）。
+   新审查必须带 `--mode`；不带时保持旧行为。
    同名活动目录、归档或历史事件存在时拒绝初始化；新审查换用唯一 slug，不覆盖旧产物。
    明确继续同一轮时复用原目录，不再次 init；不得同时派发两轮写入同一目录。
    将实际目录及有效阈值交给所有探针，覆盖注册表中的默认覆盖率参数。报告模板由 init 创建。
-   源码检查只读；本流程会写报告、探针 JSON、policy.json、事件日志和归档指标。
+   修复后或收到 `stale-review` 时，先执行 `snapshot {slug}` 更新快照，再重跑受影响的探针、重新渲染报告并检查门禁。
+   源码检查只读；本流程会写报告、探针 JSON、policy.json、review-snapshot.json、事件日志和归档指标。
 
 2. **读注册表，确定探针清单**：Read `references/probes.yaml`，按 `requires` 判断：
    - 指定了但缺失 / 不可读 → `error`
@@ -153,6 +157,9 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 
    “无已记录阻塞项”不代表验收、覆盖率、测试或 CI 已通过。`gate-pass {slug} code-review` 与有审查记录的 `archive` 均先校验报告，再同步计数，不自动修正被改写的展示。
 
+   `verify-report` 只校验报告区域与探针 JSON 一致，不校验源码新鲜度。
+   `gate-pass {slug} code-review` 会先重算 `review-snapshot.json`；被审源码变化时返回 `stale-review`（exit 3），不写门禁事件。
+
 ## <HARD-GATE>
 
 **以下任一条件命中，阻塞合入**。本轮报告列明阻塞项，下表为后续处置要求：
@@ -160,6 +167,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 | 阻塞条件 | 后续动作 |
 |---|---|
 | required 探针为 `failed` / `error`（`PROBE_REQUIRED_FAILED > 0`） | 处理已发现的问题或执行错误后，重跑对应探针 |
+| 被审源码与 `review-snapshot.json` 不一致（`stale-review`） | 按步骤 1 更新快照并复审 |
 | high finding 未完成 reconciliation（`RECONCILE_PENDING > 0`） | 按步骤 4 处理，修复后重派受影响的探针 |
 | reconcile 从未上报（`RECONCILE_REPORTED=0`） | 完成步骤 4；没有 high 也须执行最终同步 |
 | 提供了覆盖率数据且低于基线（增量行覆盖率低于项目 line_target，默认 85%） | 列明覆盖缺口，补测试后重新审查 |
@@ -176,6 +184,8 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
   `assets/code-review.md` 的章节和填写要求生成。
 - **机器记录**：`{output_root}/active/{slug}/probes/<探针名>.json`，
   格式见 `references/output-schema.md`；人类报告的事实区域由它们派生。
+- **审查快照**：`{output_root}/active/{slug}/review-snapshot.json`，由 `init --mode` 写入；
+  `gate-pass code-review` 用它拒绝过期证据。
 
 历史记录须明确迁移为独立 JSON；不从自由文本猜测或自动补零，也不同时读取旧内嵌区块。
 

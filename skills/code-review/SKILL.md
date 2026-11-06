@@ -66,14 +66,18 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
    After collecting scope, initialize a new run before dispatching:
    ```bash
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug}
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init {slug} --mode worktree
+   # or: init {slug} --mode commits --base {base} --head {head}
    ```
-   The returned JSON gives `review_dir`, `output_dir`, `line_target`, and `branch_target`.
+   The returned JSON gives `review_dir`, `output_dir`, `line_target`, `branch_target`, and `snapshot_id`.
+   With `--mode`, init also writes `review-snapshot.json`, which pins the reviewed source (worktree file hashes or
+   the fixed base/head commits). New runs must pass `--mode`; omitting it keeps the legacy behavior.
    Existing active directories, archived runs, or event history with the same slug are rejected.
    Use a unique slug for a new review; explicitly continuing the same run reuses its directory without init.
    Never dispatch two runs writing the same directory. Pass the actual directory and effective targets to all probes,
    overriding the registry's coverage defaults. Init creates the report template.
-   Source inspection is read-only; the workflow writes reports, probe JSON, policy.json, events, and archive metrics.
+   After a fix or a `stale-review` result, run `snapshot {slug}` to update the snapshot, re-run the affected probes, re-render the report, and check the gate again.
+   Source inspection is read-only; the workflow writes reports, probe JSON, policy.json, review-snapshot.json, events, and archive metrics.
 
 2. **Read the registry and determine the probe list**: Read `references/probes.yaml` and decide by `requires`:
    - Specified but missing / unreadable → `error`
@@ -153,6 +157,10 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
    "No recorded blocking items" does not mean acceptance, coverage, tests, or CI have passed. Both `gate-pass {slug} code-review` and `archive` with review records validate the report first, then synchronize counts, and do not automatically fix a rewritten display.
 
+   `verify-report` checks only that the report regions match the probe JSON; it does not check source freshness.
+   `gate-pass {slug} code-review` first re-computes `review-snapshot.json`. If the reviewed source changed, it returns
+   `stale-review` (exit 3) without writing a gate event.
+
 ## <HARD-GATE>
 
 **Any of the following conditions blocks merge**. This round's report lists the blocking items; the table below gives the follow-up handling requirements:
@@ -160,6 +168,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 | Blocking condition | Follow-up action |
 |---|---|
 | A required probe is `failed` / `error` (`PROBE_REQUIRED_FAILED > 0`) | Handle the issues found or the execution error, then re-run the corresponding probe |
+| The reviewed source no longer matches `review-snapshot.json` (`stale-review`) | Update the snapshot and re-review per step 1 |
 | A high finding has not completed reconciliation (`RECONCILE_PENDING > 0`) | Handle per step 4, and re-dispatch the affected probes after fixing |
 | Reconciliation was never reported (`RECONCILE_REPORTED=0`) | Complete step 4; run the final synchronization even when there are no high findings |
 | Coverage data was provided and is below baseline (below project line_target; default 85%) | List the coverage gaps, add tests, and re-review |
@@ -175,6 +184,8 @@ Script validation verifies consistency between report records and counts; it can
 - **Main report**: `{output_root}/active/{slug}/code-review.md`, generated per the sections and filling requirements in `assets/code-review.md`.
 - **Machine records**: `{output_root}/active/{slug}/probes/<probe-name>.json`,
   format per `references/output-schema.md`; the human report's facts section is derived from them.
+- **Review snapshot**: `{output_root}/active/{slug}/review-snapshot.json`, written by `init --mode`;
+  `gate-pass code-review` uses it to reject stale evidence.
 
 Historical records must be explicitly migrated to standalone JSON; do not infer from free text or auto-fill zeros, and do not read old embedded blocks at the same time.
 

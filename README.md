@@ -44,7 +44,7 @@ Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
   records before using them with this release.
 - **Scope:** static-first review with four probes and JSON-derived report/gate
   output. It does not replace tests, CI, or human review.
-- **Validation:** 87 offline pipeline, NEWS, installation, bilingual, and locale tests; clean-project
+- **Validation:** 112 offline pipeline, NEWS, installation, bilingual, locale, and source-freshness tests; clean-project
   end-to-end gate runs; additional probe smokes. These are regression checks,
   not a general recall claim. Concurrency-defect detection has not been
   validated.
@@ -129,6 +129,8 @@ The skill supports two review modes:
 ```text
 docs/work/active/{slug}/
 ├── code-review.md      # human report
+├── policy.json
+├── review-snapshot.json
 └── probes/
     ├── behavior-review.json
     ├── test-coverage.json
@@ -144,12 +146,12 @@ docs/work/active/{slug}/
 
 The four probes use the same model in fresh contexts. This is separation of duties, not independent human review. A passing gate is not human approval, CI, or proof that no issues remain. The current skill has no separate reviewer or finding-verification stage; raw findings feed the report and gate.
 
-1. **Scope** — determine `worktree` or `commits`; record base and head as commit IDs.
+1. **Scope** — determine `worktree` or `commits`; record base and head as commit IDs, then init the run with `--mode` to pin `review-snapshot.json`.
 2. **Probes** — dispatch four independent agents with the same scope and diff, each writing its own probe JSON. Run in batches if host capacity is limited, or record a serial fallback if agents are unavailable. Cross-probe duplicates are retained and counted; actual speed and token savings remain unverified.
 3. **Sync** — validate probe JSON and derive counts with `collect-metrics`.
 4. **Reconcile** — high findings must be closed or marked false-positive by the probe.
 5. **Report** — render the human report’s fact sections from JSON, then verify them.
-6. **Gate** — required-probe failures and open high findings block the merge.
+6. **Gate** — source freshness, required-probe failures, and open high findings block the merge.
 
 ### The four probes
 
@@ -343,11 +345,14 @@ Optional `.code-review/config.json` (paths relative to the reviewed project):
 85% / 80% are configurable defaults. Line coverage blocks below target; branch coverage is advisory.
 Probes, gates, and reports use the same effective targets. `CODE_REVIEW_OUTPUT_DIR` overrides the output root;
 pass identical settings to every shell invocation. Source inspection is read-only, but the workflow writes
-`active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, root-level `workflow-events.log`,
+`active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, `review-snapshot.json`, root-level `workflow-events.log`,
 and scorecards / `quality-trend.csv` on archive.
-Start a new review with `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`.
+Start a new review with `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug> --mode worktree`
+(or `--mode commits --base <base> [--head <head>]`). With `--mode`, init writes `review-snapshot.json`; new runs
+should always pass it. Omitting `--mode` keeps the legacy behavior and skips freshness checking.
 Existing active, archived, or event-history slugs are rejected. Re-rendering the same run updates only automatic report regions;
-do not run concurrent writers for the same run. policy.json records the initialization snapshot; keep configuration stable when
-resuming, and re-check findings and re-render after policy changes.
+do not run concurrent writers for the same run. policy.json records the initialization policy; keep configuration stable when
+resuming, and re-check findings and re-render after policy changes. `gate-pass code-review` recomputes `review-snapshot.json`
+and returns `stale-review` when the reviewed source changed; run `snapshot <slug>` after a fix and re-review.
 The minimum shell is Bash 3.2. macOS can use `/bin/bash`; Linux / Windows Git Bash use `bash`.
 A macOS CI job is configured; a passing macOS result has not been established locally.

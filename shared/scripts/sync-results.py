@@ -4,11 +4,13 @@
 import argparse
 from collections import Counter
 from copy import deepcopy
+import hashlib
 import json
 import html
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
+import subprocess
 import sys
 import tempfile
 
@@ -34,6 +36,15 @@ LABEL_KEYS = frozenset({
     'unverified_status', 'unverified_probe', 'unverified_reason',
     'unverified_needed_evidence', 'summary_unverified',
 })
+
+SNAPSHOT_NAME = 'review-snapshot.json'
+SNAPSHOT_VERSION = 1
+SNAPSHOT_ID = re.compile(r'sha256:[0-9a-f]{64}\Z')
+GIT_OID = re.compile(r'[0-9a-f]{40}(?:[0-9a-f]{24})?\Z')
+
+
+class StaleReview(ValueError):
+    """The reviewed source no longer matches the recorded snapshot."""
 
 
 def load_labels():
@@ -82,7 +93,271 @@ def runtime_config(project, configuration):
     return result
 
 
-def init_review(project, configuration, slug):
+def project_relative(project, path):
+    try:
+        relative = Path(path).resolve().relative_to(Path(project).resolve())
+    except ValueError:
+        return None
+    value = relative.as_posix()
+    return None if value in ('', '.') else value
+
+
+def snapshot_excludes(project, *paths):
+    values = {project_relative(project, path) for path in paths if path is not None}
+    return sorted(value for value in values if value)
+
+
+def is_excluded(relative, excludes):
+    path = PurePosixPath(relative)
+    return any(path == root or root in path.parents for root in map(PurePosixPath, excludes))
+
+
+def git_run(project, *args):
+    result = subprocess.run(['git', '-C', str(project), *args], capture_output=True)
+    if result.returncode:
+        detail = result.stderr.decode('utf-8', 'replace').strip() or f'exit {result.returncode}'
+        raise ValueError(f'git {" ".join(args)} 失败: {detail}')
+    return result.stdout
+
+
+def resolve_commit(project, ref):
+    require(isinstance(ref, str) and bool(ref.strip()), 'git ref 必须为非空字符串')
+    return git_run(project, 'rev-parse', '--verify', ref + '^{commit}').decode('ascii').strip()
+
+
+def split_paths(data):
+    return [path for path in (os.fsdecode(item) for item in data.split(b'\0')) if path]
+
+
+def changed_paths(project, base):
+    return split_paths(git_run(project, 'diff', '--relative', '--name-only', '-z', base, '--'))
+
+
+def untracked_paths(project):
+    return split_paths(git_run(project, 'ls-files', '--others', '--exclude-standard', '-z'))
+
+
+def index_entries(project):
+    entries = {}
+    for item in git_run(project, 'ls-files', '--stage', '-z').split(b'\0'):
+        if not item:
+            continue
+        meta, _, raw = item.partition(b'\t')
+        parts = meta.split(b' ')
+        if len(parts) >= 2:
+            entries[os.fsdecode(raw)] = (parts[0].decode('ascii'), parts[1].decode('ascii'))
+    return entries
+
+
+def hash_file(path):
+    digest = hashlib.sha256()
+    with Path(path).open('rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def file_digest(project, relative):
+    path = Path(project) / relative
+    if path.is_symlink():
+        return hashlib.sha256(os.fsencode(os.readlink(path))).hexdigest()
+    if not path.exists():
+        return None
+    require(path.is_file(), f'不支持的审查输入: {relative}')
+    return hash_file(path)
+
+
+def checkout_gitlink(project, relative):
+    path = Path(project) / relative
+    if not path.is_dir():
+        return None
+    try:
+        return git_run(path, 'rev-parse', '--verify', 'HEAD').decode('ascii').strip()
+    except (ValueError, OSError):
+        return None
+
+
+def worktree_files(project, base, excludes):
+    changed = changed_paths(project, base)
+    untracked = set(untracked_paths(project))
+    visible = [path for path in sorted(set(changed) | untracked) if not is_excluded(path, excludes)]
+    index = index_entries(project)
+    files = []
+    for relative in visible:
+        mode, oid = index.get(relative, (None, None))
+        if mode == '160000':
+            files.append(dict(path=relative, sha256=None,
+                              gitlink=checkout_gitlink(project, relative) or oid))
+        elif relative.endswith('/'):
+            head = checkout_gitlink(project, relative.rstrip('/'))
+            if head is not None:
+                files.append(dict(path=relative.rstrip('/'), sha256=None, gitlink=head))
+        else:
+            files.append(dict(path=relative, sha256=file_digest(project, relative)))
+    return files
+
+
+def canonical_file(item):
+    result = dict(path=item['path'], sha256=item['sha256'])
+    if 'gitlink' in item:
+        result['gitlink'] = item['gitlink']
+    return result
+
+
+def canonical_snapshot(snapshot):
+    return dict(
+        version=snapshot['version'],
+        mode=snapshot['mode'],
+        base=snapshot['base'],
+        head=snapshot['head'],
+        excludes=sorted(snapshot['excludes']),
+        files=[canonical_file(item) for item in sorted(snapshot['files'], key=lambda item: item['path'])],
+    )
+
+
+def compute_snapshot_id(snapshot):
+    payload = json.dumps(canonical_snapshot(snapshot), sort_keys=True, separators=(',', ':'),
+                         ensure_ascii=True)
+    return 'sha256:' + hashlib.sha256(payload.encode('utf-8')).hexdigest()
+
+
+def build_snapshot(project, mode, base_ref=None, head_ref=None, excludes=()):
+    require(mode in ('worktree', 'commits'), 'snapshot mode 必须为 worktree 或 commits')
+    project = Path(project).resolve()
+    if mode == 'worktree':
+        base_ref = base_ref or 'HEAD'
+        require(head_ref is None, 'worktree 模式不接受 --head')
+        base = resolve_commit(project, base_ref)
+        head = base
+        files = worktree_files(project, base, excludes)
+        resolved_head_ref = None
+    else:
+        require(base_ref is not None, 'commits 模式需要 --base')
+        head_ref = head_ref or 'HEAD'
+        base = resolve_commit(project, base_ref)
+        head = resolve_commit(project, head_ref)
+        files = []
+        resolved_head_ref = head_ref
+    snapshot = dict(
+        version=SNAPSHOT_VERSION,
+        mode=mode,
+        project_root=project.as_posix(),
+        base_ref=base_ref,
+        head_ref=resolved_head_ref,
+        base=base,
+        head=head,
+        excludes=sorted(excludes),
+        files=files,
+    )
+    snapshot['snapshot_id'] = compute_snapshot_id(snapshot)
+    return snapshot
+
+
+def write_snapshot(directory, snapshot):
+    path = Path(directory) / SNAPSHOT_NAME
+    descriptor, temporary = tempfile.mkstemp(prefix='.snapshot-', suffix='.tmp', dir=directory)
+    try:
+        with os.fdopen(descriptor, 'w', encoding='utf-8', newline='\n') as stream:
+            json.dump(snapshot, stream, indent=2, ensure_ascii=False)
+            stream.write('\n')
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def read_snapshot(directory):
+    path = Path(directory) / SNAPSHOT_NAME
+    require(path.is_file(), f'缺少 {SNAPSHOT_NAME}；请先带 --mode 运行 init 或执行 snapshot')
+    data = load_record(path)
+    required = ('version', 'snapshot_id', 'mode', 'project_root', 'base_ref', 'head_ref',
+                'base', 'head', 'excludes', 'files')
+    fields(data, required, (), 'review snapshot')
+    require(data['version'] == SNAPSHOT_VERSION, '不支持的 review-snapshot 版本')
+    require(data['mode'] in ('worktree', 'commits'), 'review-snapshot mode 非法')
+    require(SNAPSHOT_ID.fullmatch(data['snapshot_id']) is not None,
+            'snapshot_id 必须为 sha256:<64 hex>')
+    for key in ('project_root', 'base_ref', 'base', 'head'):
+        text(data[key], f'review snapshot.{key}')
+    if data['mode'] == 'worktree':
+        require(data['head_ref'] is None, 'worktree 模式的 head_ref 必须为 null')
+    else:
+        text(data['head_ref'], 'review snapshot.head_ref')
+    for key in ('base', 'head'):
+        require(GIT_OID.fullmatch(data[key]) is not None, f'review snapshot.{key} 非法')
+    require(isinstance(data['excludes'], list), 'review snapshot.excludes 必须为数组')
+    for value in data['excludes']:
+        text(value, 'review snapshot.excludes')
+        pure = PurePosixPath(value)
+        require(not pure.is_absolute() and '..' not in pure.parts,
+                'review snapshot.excludes 必须为项目相对路径')
+    require(isinstance(data['files'], list), 'review snapshot.files 必须为数组')
+    if data['mode'] == 'commits':
+        require(data['files'] == [], 'commits 模式的 files 必须为空')
+    seen = set()
+    for item in data['files']:
+        fields(item, ('path', 'sha256'), ('gitlink',), 'review snapshot.files')
+        text(item['path'], 'review snapshot.files.path')
+        pure = PurePosixPath(item['path'])
+        require(not pure.is_absolute() and '..' not in pure.parts,
+                'review snapshot.files.path 必须为项目相对路径')
+        require(item['path'] not in seen, f'review snapshot.files 路径重复: {item["path"]}')
+        seen.add(item['path'])
+        require(item['sha256'] is None or (isinstance(item['sha256'], str)
+                and re.fullmatch(r'[0-9a-f]{64}', item['sha256']) is not None),
+                'review snapshot.files.sha256 非法')
+        if 'gitlink' in item:
+            require(GIT_OID.fullmatch(item['gitlink']) is not None, 'review snapshot.files.gitlink 非法')
+    require(compute_snapshot_id(data) == data['snapshot_id'],
+            'review-snapshot 的 snapshot_id 与内容不一致')
+    return data
+
+
+def verify_review_snapshot(directory, project):
+    old = read_snapshot(directory)
+    project = Path(project).resolve()
+    require(Path(old['project_root']).resolve() == project,
+            'review-snapshot 的 project_root 与当前项目不一致')
+    if old['mode'] == 'commits':
+        base = resolve_commit(project, old['base_ref'])
+        head = resolve_commit(project, old['head_ref'])
+        if base != old['base'] or head != old['head']:
+            raise StaleReview(f'审查目标已移动: base {old["base"]} -> {base}, head {old["head"]} -> {head}')
+        return old
+    base = resolve_commit(project, old['base_ref'])
+    if base != old['base']:
+        raise StaleReview(f'审查 base 已移动: {old["base"]} -> {base}')
+    files = worktree_files(project, old['base'], old['excludes'])
+    before = {item['path']: canonical_file(item) for item in old['files']}
+    after = {item['path']: canonical_file(item) for item in files}
+    changed = [path for path in sorted(set(before) | set(after)) if before.get(path) != after.get(path)]
+    if changed:
+        shown = ', '.join(changed[:10])
+        more = f' 等 {len(changed)} 个文件' if len(changed) > 10 else ''
+        raise StaleReview(f'已审查源码发生变化: {shown}{more}')
+    return old
+
+
+def remint_snapshot(directory, project, configuration, mode=None, base=None, head=None):
+    directory = Path(directory)
+    old = read_snapshot(directory) if (directory / SNAPSHOT_NAME).is_file() else None
+    if old is not None:
+        mode = mode or old['mode']
+        # Worktree remint keeps the original base commit so committed fixes stay in scope.
+        base = base or (old['base'] if old['mode'] == 'worktree' else old['base_ref'])
+        head = head or old['head_ref']
+        excludes = old['excludes']
+    else:
+        require(mode is not None, '缺少 --mode；旧 run 重铸快照需要指定 worktree 或 commits')
+        policy = runtime_config(project, configuration)
+        skill_root = Path(__file__).resolve().parents[1]
+        excludes = snapshot_excludes(project, policy['output_dir'], skill_root)
+    snapshot = build_snapshot(project, mode, base, head, excludes)
+    write_snapshot(directory, snapshot)
+    return snapshot
+
+
+def init_review(project, configuration, slug, mode=None, base=None, head=None):
     require(NAME.fullmatch(slug) is not None and slug not in ('.', '..'), 'invalid slug')
     policy = runtime_config(project, configuration)
     root = Path(policy['output_dir'])
@@ -92,6 +367,11 @@ def init_review(project, configuration, slug):
         require(not any(len(row.split('\t')) > 2 and row.split('\t')[2] == slug
                         for row in events.read_text(encoding='utf-8').splitlines()), 'slug already has events: ' + slug)
     directory = root / 'active' / slug
+    snapshot = None
+    if mode is not None:
+        skill_root = Path(__file__).resolve().parents[1]
+        excludes = snapshot_excludes(project, policy['output_dir'], skill_root)
+        snapshot = build_snapshot(project, mode, base, head, excludes)
     directory.parent.mkdir(parents=True, exist_ok=True)
     directory.mkdir()  # Exclusive creation: a new run must never reuse existing output.
     (directory / 'probes').mkdir()
@@ -100,7 +380,12 @@ def init_review(project, configuration, slug):
     content = content.replace('{branch_target}', str(policy['branch_target']))
     (directory / 'code-review.md').write_text(content, encoding='utf-8')
     (directory / 'policy.json').write_text(json.dumps(policy, indent=2), encoding='utf-8')
-    print(json.dumps(dict(review_dir=directory.as_posix(), **policy)))
+    if snapshot is not None:
+        write_snapshot(directory, snapshot)
+    result = dict(review_dir=directory.as_posix(), **policy)
+    if snapshot is not None:
+        result['snapshot_id'] = snapshot['snapshot_id']
+    print(json.dumps(result))
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -348,6 +633,9 @@ def main():
     parser.add_argument('--project-root', type=Path)
     parser.add_argument('--runtime-config', action='store_true')
     parser.add_argument('--init-review')
+    parser.add_argument('--mode', choices=('worktree', 'commits'))
+    parser.add_argument('--base')
+    parser.add_argument('--head')
     parser.add_argument('--probes', action='store_true', help='Validate probe reports without claiming reconciliation')
     output = parser.add_mutually_exclusive_group()
     output.add_argument('--events', action='store_true')
@@ -356,17 +644,32 @@ def main():
     output.add_argument('--write-report', action='store_true', help='Replace generated report regions only')
     output.add_argument('--check-report', action='store_true', help='Verify every generated field without writing')
     output.add_argument('--summary', action='store_true', help='Print the canonical delivery summary from validated JSON')
+    output.add_argument('--snapshot', action='store_true', help='Create or refresh review-snapshot.json')
+    output.add_argument('--verify-snapshot', action='store_true', help='Verify the reviewed source still matches review-snapshot.json')
     args = parser.parse_args()
     try:
         if args.runtime_config or args.init_review:
             require(args.project_root is not None, 'project root required')
             if args.init_review:
-                init_review(args.project_root, args.registry, args.init_review)
+                init_review(args.project_root, args.registry, args.init_review,
+                            args.mode, args.base, args.head)
             else:
                 policy = runtime_config(args.project_root, args.registry)
                 print('{output_dir}\t{line_target}\t{branch_target}'.format(**policy))
             return 0
         require(args.review_dir is not None, 'review directory required')
+        if args.verify_snapshot:
+            require(args.project_root is not None, 'project root required')
+            snapshot = verify_review_snapshot(args.review_dir, args.project_root)
+            print(f'快照校验通过: {snapshot["snapshot_id"]}')
+            return 0
+        if args.snapshot:
+            require(args.project_root is not None, 'project root required')
+            snapshot = remint_snapshot(args.review_dir, args.project_root, args.registry,
+                                       args.mode, args.base, args.head)
+            print(json.dumps(dict(review_dir=args.review_dir.as_posix(),
+                                  snapshot_id=snapshot['snapshot_id'])))
+            return 0
         labels = load_labels()
         summary = summarize(args.review_dir, args.registry, args.probes)
         if args.render or args.write_report or args.check_report:
@@ -377,6 +680,9 @@ def main():
                 update_report(args.review_dir, sections, check=args.check_report)
         if args.summary:
             require(not args.probes, '摘要需要最终同步结果')
+    except StaleReview as error:
+        print(f'stale-review: {error}', file=sys.stderr)
+        return 3
     except (ValueError, TypeError, OSError, yaml.YAMLError) as error:
         print(f'错误: {error}', file=sys.stderr)
         return 1

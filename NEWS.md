@@ -8,7 +8,13 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
-_No user-facing changes since the latest release._
+### Added
+
+- code-review: pin the reviewed source in `review-snapshot.json`; `gate-pass code-review` now returns `stale-review` when the worktree or commit target changes after review.
+
+### Changed
+
+- code-review: `init` accepts `--mode worktree|commits [--base] [--head]` and writes the snapshot; `snapshot <slug>` re-pins the source after a fix. Runs without `--mode` keep the legacy behavior and skip freshness checking.
 
 <!-- UNRELEASED:END -->
 

@@ -16,8 +16,10 @@ usage() {
 用法: scripts/collect-metrics <子命令> <slug> [选项]
 
 子命令:
-  init <slug>
-      Exclusively create a new run; return its directory and effective policy
+  init <slug> [--mode worktree|commits] [--base REF] [--head REF]
+      Exclusively create a new run; --mode also records review-snapshot.json
+  snapshot <slug> [--mode worktree|commits] [--base REF] [--head REF]
+      Create or refresh review-snapshot.json for an existing run after fixes
   deviation <slug> --count N --reasonable M
       偏离总数与其中合理的条数
   security  <slug> --high N --medium M --low L
@@ -45,6 +47,8 @@ usage() {
 说明:
   输出根: 项目 output_dir / CODE_REVIEW_OUTPUT_DIR（默认 docs/work）
   事件日志: <output_root>/workflow-events.log
+  review-snapshot: <output_root>/active/<slug>/review-snapshot.json
+  stale-review:    gate-pass code-review 会重算源码快照；变化时拒绝并返回 3
   scorecard: <output_root>/active/<slug>/quality-scorecard.txt
   趋势:     <output_root>/quality-trend.csv
 EOF
@@ -113,6 +117,29 @@ summary_report() {
     --project-root "$WF_ROOT" --review-dir "$directory" --registry "$skill_dir/references/probes.yaml" --summary
 }
 
+review_snapshot() {
+  local slug="$1" directory skill_dir
+  validate_slug "$slug"
+  directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
+  skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
+  local args=(--project-root "$WF_ROOT" --review-dir "$directory" \
+    --registry "$skill_dir/references/probes.yaml" --snapshot)
+  [ -z "$PARAM_mode" ] || args+=(--mode "$PARAM_mode")
+  [ -z "$PARAM_base" ] || args+=(--base "$PARAM_base")
+  [ -z "$PARAM_head" ] || args+=(--head "$PARAM_head")
+  "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" "${args[@]}"
+}
+
+verify_review_snapshot() {
+  local slug="$1" directory skill_dir
+  validate_slug "$slug"
+  directory="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
+  skill_dir="${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}"
+  "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
+    --project-root "$WF_ROOT" --review-dir "$directory" \
+    --registry "$skill_dir/references/probes.yaml" --verify-snapshot
+}
+
 # 校验非负整数。空串在这里一律拒绝 —— 「没传」与「传了 0」必须区分开，
 # 否则一个漏传的参数会静默变成 0 分指标。
 require_uint() {   # <名称> <值>
@@ -131,9 +158,13 @@ parse_flags() {   # <...args>
   PARAM_count=""; PARAM_reasonable=""; PARAM_low=""; PARAM_high=""
   PARAM_medium=""; PARAM_files=""; PARAM_line=""; PARAM_branch=""
   PARAM_line_set=false; PARAM_branch_set=false
-  PARAM_profile=""; PARAM_kv=""
+  PARAM_profile=""; PARAM_kv=""; PARAM_mode=""; PARAM_base=""; PARAM_head=""
+  PARAM_mode_set=false; PARAM_base_set=false; PARAM_head_set=false
   while [ $# -gt 0 ]; do
     case "$1" in
+      --mode)       PARAM_mode_set=true; PARAM_mode="${2:-}"; shift; shift 2>/dev/null || true ;;
+      --base)       PARAM_base_set=true; PARAM_base="${2:-}"; shift; shift 2>/dev/null || true ;;
+      --head)       PARAM_head_set=true; PARAM_head="${2:-}"; shift; shift 2>/dev/null || true ;;
       --count)      PARAM_count="${2:-}";      shift; shift 2>/dev/null || true ;;
       --reasonable) PARAM_reasonable="${2:-}"; shift; shift 2>/dev/null || true ;;
       --low)        PARAM_low="${2:-}";   shift; shift 2>/dev/null || true ;;
@@ -162,10 +193,36 @@ CMD="$1"; shift || true
 
 case "$CMD" in
   init)
-    [ "$#" -eq 1 ] || die "init requires one new slug"
-    "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" \
-      --registry "${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}/references/probes.yaml" \
-      --project-root "$WF_ROOT" --init-review "$1"
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || die "init requires one new slug"
+    parse_flags "$@" || die "init: 未知选项"
+    [ "$PARAM_mode_set" = true ] && [ -z "$PARAM_mode" ] && die "init: --mode 需要 worktree 或 commits"
+    if [ -n "$PARAM_mode" ]; then
+      case "$PARAM_mode" in worktree|commits) ;; *) die "init: --mode 只接受 worktree 或 commits" ;; esac
+    elif [ "$PARAM_base_set" = true ] || [ "$PARAM_head_set" = true ]; then
+      die "init: --base/--head 需要同时提供 --mode"
+    fi
+    [ "$PARAM_base_set" = true ] && [ -z "$PARAM_base" ] && die "init: --base 不能为空"
+    [ "$PARAM_head_set" = true ] && [ -z "$PARAM_head" ] && die "init: --head 不能为空"
+    init_args=(--registry "${CODE_REVIEW_SKILL_DIR:-$(dirname "$SCRIPT_DIR")}/references/probes.yaml" \
+      --project-root "$WF_ROOT" --init-review "$slug")
+    [ -z "$PARAM_mode" ] || init_args+=(--mode "$PARAM_mode")
+    [ -z "$PARAM_base" ] || init_args+=(--base "$PARAM_base")
+    [ -z "$PARAM_head" ] || init_args+=(--head "$PARAM_head")
+    "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$SCRIPT_DIR/sync-results.py" "${init_args[@]}"
+    ;;
+
+  snapshot)
+    slug="${1:-}"; shift || true
+    [ -n "$slug" ] || { echo "错误: 缺少 slug" >&2; usage >&2; exit 1; }
+    parse_flags "$@" || die "snapshot: 未知选项"
+    [ "$PARAM_mode_set" = true ] && [ -z "$PARAM_mode" ] && die "snapshot: --mode 需要 worktree 或 commits"
+    if [ -n "$PARAM_mode" ]; then
+      case "$PARAM_mode" in worktree|commits) ;; *) die "snapshot: --mode 只接受 worktree 或 commits" ;; esac
+    fi
+    [ "$PARAM_base_set" = true ] && [ -z "$PARAM_base" ] && die "snapshot: --base 不能为空"
+    [ "$PARAM_head_set" = true ] && [ -z "$PARAM_head" ] && die "snapshot: --head 不能为空"
+    review_snapshot "$slug"
     ;;
   -h|--help|help)
     usage; exit 0 ;;
@@ -235,6 +292,13 @@ case "$CMD" in
     [ -n "$node" ] || { echo "错误: 缺少 node" >&2; usage >&2; exit 1; }
     parse_flags "$@" || die "gate-pass: 未知选项"
     if [ "$node" = code-review ]; then
+      gate_dir="$(find_slug_dir "$slug")" || die "找不到审查目录: $slug"
+      if [ -f "$gate_dir/review-snapshot.json" ]; then
+        # stale-review 必须让 exit 3 原样透传，不能包成 die。
+        verify_review_snapshot "$slug"
+      else
+        warn "未找到 review-snapshot.json，跳过新鲜度校验（legacy run）"
+      fi
       review_report "$slug" --check-report
       sync_review_results "$slug"
       collect_metrics "$slug"

@@ -28,7 +28,7 @@
 
 - **三级评级**：`high`、`medium`、`low`。此前四级版本写入的记录，包括包含 `critical` 值的记录，**不兼容**当前版本；`collect-metrics` 会拒绝这些记录。使用前请重新审查，或显式迁移记录。
 - **适用范围**：以静态分析为主，使用四个探针，以及从 JSON 派生的报告和门禁。不能替代测试、CI 或人工审查。
-- **验证情况**：87 项审查流程、NEWS、安装、双语与结构离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
+- **验证情况**：112 项审查流程、NEWS、安装、双语、结构与源码新鲜度离线测试；干净项目中的端到端门禁验证；额外的探针冒烟验证。这些属于回归检查，不能据此宣称具备通用召回能力。并发缺陷识别尚未验证。
 
 下次发布正式版时，只需修改 `VERSION`（例如 `0.1.1`）并推送 `main`。Validate skills 通过后，发布流程自动根据提交整理 NEWS、同步 README 版本信息、打标签并发布 GitHub Release。已有版本不覆盖，CI 失败不发布。
 
@@ -110,6 +110,8 @@ Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skil
 ```text
 docs/work/active/{slug}/
 ├── code-review.md      # 人读报告
+├── policy.json
+├── review-snapshot.json
 └── probes/
     ├── behavior-review.json
     ├── test-coverage.json
@@ -125,12 +127,12 @@ docs/work/active/{slug}/
 
 四个探针使用同一模型、各自在全新上下文中执行；这是职责隔离，不是独立人工审计。门禁通过不等于人工批准、CI 通过，也不代表没有遗漏问题。当前 skill 没有独立的 reviewer 或 finding 验证阶段；原始 finding 直接进入报告和门禁。
 
-1. **确定范围**：选择 `worktree` 或 `commits`，将 base 和 head 记录为 commit ID。
+1. **确定范围**：选择 `worktree` 或 `commits`，将 base 和 head 记录为 commit ID，再用 `--mode` 初始化本轮并生成 `review-snapshot.json`。
 2. **探针检查**：派发四个独立代理，使用同一份范围和 diff，各自写自己的探针 JSON。宿主槽位不足时分批执行；没有代理能力时记录串行回退。跨探针重复问题暂时保留并计数，实际提速和 token 节省尚未验证。
 3. **同步**：使用 `collect-metrics` 校验探针 JSON 并计算数量。
 4. **对账**：high 问题需要关闭，或被 probe 标为误报。
 5. **报告**：从 JSON 生成人读报告的事实区，再校验展示内容。
-6. **门禁**：必需探针失败、存在未处理的 high 问题时，阻塞合并。
+6. **门禁**：源码新鲜度、必需探针失败、存在未处理的 high 问题时，阻塞合并。
 
 ### 四个探针
 
@@ -318,10 +320,14 @@ code-review-skill/
 
 85% / 80% 是可配置默认值；行覆盖率参与阻塞，分支仅提示。探针、门禁和报告使用相同有效阈值。
 `CODE_REVIEW_OUTPUT_DIR` 可覆盖产物根目录；独立 shell 调用须传入同样配置。
-源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、`policy.json`、
+源码检查只读，但流程会写入 `active/<slug>/code-review.md`、`probes/*.json`、`policy.json`、`review-snapshot.json`、
 根目录的 `workflow-events.log`，以及 archive 命令生成的 scorecard 和 `quality-trend.csv`。
-新审查先执行 `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug>`；
+新审查先执行 `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug> --mode worktree`
+（或 `--mode commits --base <base> [--head <head>]`）。带 `--mode` 时 init 会写入 `review-snapshot.json`；
+新审查应始终传入。省略 `--mode` 保持旧行为，并跳过新鲜度校验。
 同名活动目录、归档或历史事件存在时拒绝创建。同轮重渲染仅更新报告自动区域；不应并发写同一轮。
-记录的 policy.json 是初始化快照；继续同轮时保持配置不变，改变阈值后须重新检查并渲染报告。
+记录的 policy.json 是初始化策略；继续同轮时保持配置不变，改变阈值后须重新检查并渲染报告。
+`gate-pass code-review` 会重算 `review-snapshot.json`，被审源码变化时返回 `stale-review`；
+修复后执行 `snapshot <slug>` 重铸快照并重新审查。
 最低 shell 为 Bash 3.2；macOS 可用 `/bin/bash`，Linux / Windows Git Bash 用 `bash`。
 macOS CI 已配置，尚未在本机验证 macOS；CI 通过后才可声称该平台验证通过。
