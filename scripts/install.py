@@ -21,10 +21,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SOURCE_SKILLS = {
-    "en": REPO / "skills" / "code-review",
-    "zh-CN": REPO / "skills" / "code-review-zh",
+    "en": REPO / "skills" / "code-review-gate",
+    "zh-CN": REPO / "skills" / "code-review-gate-zh",
 }
-TARGET_NAMES = {"en": "code-review", "zh-CN": "code-review-zh"}
+TARGET_NAMES = {"en": "code-review-gate", "zh-CN": "code-review-gate-zh"}
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
 
 
@@ -171,7 +171,7 @@ def _apply(project: Path, actions: list[dict]) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Install the code-review skill.")
+    parser = argparse.ArgumentParser(description="Install the code-review-gate skill.")
     parser.add_argument("--agent", required=True, choices=("claude-code", "codex", "both"),
                         help="host skill layout to install")
     parser.add_argument("--lang", default="en", choices=("en", "zh-CN"),

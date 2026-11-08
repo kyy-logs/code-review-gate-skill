@@ -14,6 +14,7 @@ and evaluation artifacts out of this file.
 
 ### Changed
 
+- **Breaking:** rename the installable skills to `code-review-gate` / `code-review-gate-zh` to avoid the host's built-in `/code-review`; installed directories and `--skill` values change. Internal `CODE_REVIEW_*` settings, `code-review.md`, and the `gate-pass ... code-review` node keep their names.
 - code-review: `init` accepts `--mode worktree|commits [--base] [--head]` and writes the snapshot; `snapshot <slug>` re-pins the source after a fix. Runs without `--mode` keep the legacy behavior and skip freshness checking.
 
 <!-- UNRELEASED:END -->

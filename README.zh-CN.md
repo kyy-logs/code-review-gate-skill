@@ -4,7 +4,7 @@
 
 **基于证据的代码审查：优先静态分析，使用探针分工，并根据结果执行门禁。**
 
-技能源码位于 [`skills/code-review/`](skills/code-review/)（英文）和 [`skills/code-review-zh/`](skills/code-review-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.1.1`，版本号见 [VERSION](VERSION)。
+技能源码位于 [`skills/code-review-gate/`](skills/code-review-gate/)（英文）和 [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.1.1`，版本号见 [VERSION](VERSION)。
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -72,10 +72,10 @@
 
 ```bash
 # 英文（默认）
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review --yes
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate --yes
 
 # 中文
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-zh --yes
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate-zh --yes
 ```
 
 Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skill>/`，Claude Code 安装到 `.claude/skills/<skill>/`。需要 Node.js 22.20+。项目内只安装一种语言。Python 安装器也支持 `--lang en|zh-CN`，默认英文。
@@ -91,13 +91,13 @@ Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skil
 也可以直接调用：
 
 ```text
-/code-review-zh
+/code-review-gate-zh
 ```
 
 审查固定提交区间：
 
 ```text
-使用 code-review-zh 审查提交 abc123..def456
+使用 code-review-gate-zh 审查提交 abc123..def456
 ```
 
 支持两种模式：
@@ -272,12 +272,12 @@ code-review-skill/
 │   ├── rule-grep
 │   └── sync-results.py
 ├── skills/
-│   ├── code-review/
+│   ├── code-review-gate/
 │   │   ├── SKILL.md
 │   │   ├── assets/
 │   │   ├── references/
 │   │   └── scripts/
-│   └── code-review-zh/
+│   └── code-review-gate-zh/
 │       ├── SKILL.md
 │       ├── assets/
 │       ├── references/

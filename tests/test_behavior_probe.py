@@ -17,7 +17,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL = ROOT / 'skills/code-review'
+SKILL = ROOT / 'skills/code-review-gate'
 PROBES = ('behavior-review', 'test-coverage', 'repo-guard', 'impact-analysis')
 
 

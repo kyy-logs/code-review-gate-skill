@@ -30,13 +30,13 @@ class RemoteInstallerTests(unittest.TestCase):
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.source = Path(cls.temporary.name) / "source repository"
         cls.source.mkdir()
-        shutil.copytree(ROOT / "skills/code-review", cls.source / "skills/code-review",
+        shutil.copytree(ROOT / "skills/code-review-gate", cls.source / "skills/code-review-gate",
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        shutil.copytree(ROOT / "skills/code-review-zh", cls.source / "skills/code-review-zh",
+        shutil.copytree(ROOT / "skills/code-review-gate-zh", cls.source / "skills/code-review-gate-zh",
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         (cls.source / "scripts").mkdir()
         shutil.copyfile(ROOT / "scripts/install.py", cls.source / "scripts/install.py")
-        marker = cls.source / "skills/code-review/fixture-version"
+        marker = cls.source / "skills/code-review-gate/fixture-version"
         marker.write_text("selected release", encoding="utf-8")
         cls.git("init", "--initial-branch", "install-test")
         cls.git("add", ".")
@@ -78,7 +78,7 @@ class RemoteInstallerTests(unittest.TestCase):
         result = self.install("--agent", "codex", "--json")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(json.loads(result.stdout)["ok"])
-        skill = self.project / ".agents/skills/code-review"
+        skill = self.project / ".agents/skills/code-review-gate"
         self.assertEqual((skill / "fixture-version").read_text(), "selected release")
         self.assertFalse((self.project / ".codex").exists())
         self.assertFalse((self.project / ".claude").exists())
@@ -87,16 +87,16 @@ class RemoteInstallerTests(unittest.TestCase):
     def test_zh_language_is_forwarded_to_installer(self):
         result = self.install("--agent", "codex", "--lang", "zh-CN")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".agents/skills/code-review-zh/SKILL.md").is_file())
-        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+        self.assertTrue((self.project / ".agents/skills/code-review-gate-zh/SKILL.md").is_file())
+        self.assertFalse((self.project / ".agents/skills/code-review-gate").exists())
 
     def test_both_hosts_and_explicit_project_path(self):
         destination = self.directory / "another project"
         destination.mkdir()
         result = self.install("--agent", "both", "--project", str(destination))
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((destination / ".claude/skills/code-review/SKILL.md").is_file())
-        self.assertTrue((destination / ".agents/skills/code-review/SKILL.md").is_file())
+        self.assertTrue((destination / ".claude/skills/code-review-gate/SKILL.md").is_file())
+        self.assertTrue((destination / ".agents/skills/code-review-gate/SKILL.md").is_file())
         self.assertFalse((destination / ".claude/agents").exists())
         self.assertFalse((destination / ".codex").exists())
         self.assertEqual(list(self.project.iterdir()), [])
@@ -108,7 +108,7 @@ class RemoteInstallerTests(unittest.TestCase):
         self.assertEqual(list(self.project.iterdir()), [])
 
     def test_conflict_exit_and_force_backup_survive_remote_entry(self):
-        skill = self.project / ".agents/skills/code-review"
+        skill = self.project / ".agents/skills/code-review-gate"
         skill.mkdir(parents=True)
         (skill / "custom.txt").write_text("custom skill", encoding="utf-8")
         result = self.install("--agent", "codex")
@@ -117,7 +117,7 @@ class RemoteInstallerTests(unittest.TestCase):
         self.assertFalse((self.project / ".claude").exists())
         result = self.install("--agent", "codex", "--force")
         self.assertEqual(result.returncode, 0, result.stderr)
-        backups = list(skill.parent.glob("code-review.bak.*"))
+        backups = list(skill.parent.glob("code-review-gate.bak.*"))
         self.assertEqual(len(backups), 1)
         self.assertEqual((backups[0] / "custom.txt").read_text(), "custom skill")
 

@@ -1,5 +1,5 @@
 ---
-name: code-review
+name: code-review-gate
 description: Use when code has been written, before committing, or when merging a PR; also when the user says "review my code", "check before commit", "take a look at this change", "PR review", or asks for a strict review/merge gate.
 ---
 
