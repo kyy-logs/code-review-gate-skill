@@ -1,4 +1,4 @@
-# code-review probe registry: maintains the probe list, dependencies, and parameters.
+# code-review-gate probe registry: maintains the probe list, dependencies, and parameters.
 # See section 4 of references/output-schema.md for the meaning of required / requires and execution status.
 
 version: 1

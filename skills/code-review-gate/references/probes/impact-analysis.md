@@ -2,6 +2,8 @@
 
 **required: false** | **requires: []**
 
+Read [`common.md`](common.md) first; it defines the constraints shared by all probes.
+
 Check this change's impact on callers, contracts, performance, and architecture.
 
 ## 1. Inbound callers of changed methods (fan-in)

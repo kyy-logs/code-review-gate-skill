@@ -22,8 +22,8 @@ class SyncSkillScriptsTests(unittest.TestCase):
         for name in SOURCES:
             (self.shared / name).write_text('source ' + name + '\n', encoding='utf-8')
         self.packages = [
-            self.root / 'skills/code-review/scripts',
-            self.root / 'skills/code-review-zh/scripts',
+            self.root / 'skills/code-review-gate/scripts',
+            self.root / 'skills/code-review-gate-zh/scripts',
         ]
 
     def run_sync(self, *args):

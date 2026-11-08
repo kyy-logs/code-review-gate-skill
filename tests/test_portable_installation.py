@@ -13,8 +13,8 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT / 'skills/code-review'
-ZH_SOURCE = ROOT / 'skills/code-review-zh'
+SOURCE = ROOT / 'skills/code-review-gate'
+ZH_SOURCE = ROOT / 'skills/code-review-gate-zh'
 
 
 class PortableInstallationTests(unittest.TestCase):
@@ -48,7 +48,7 @@ class PortableInstallationTests(unittest.TestCase):
                               env=self.environment, capture_output=True, text=True, encoding='utf-8', timeout=30)
 
     def test_python_pipeline_works_after_copying_to_each_install_location(self):
-        for location in ('.claude/skills/code-review', 'custom skill directory/code-review'):
+        for location in ('.claude/skills/code-review-gate', 'custom skill directory/code-review'):
             with self.subTest(location=location):
                 self.install(location)
                 before = {p: p.read_bytes() for p in self.review.rglob('*.json')}
@@ -64,8 +64,8 @@ class PortableInstallationTests(unittest.TestCase):
 
     def test_bilingual_packages_work_after_copying(self):
         for source, name, heading in (
-            (SOURCE, 'code-review', 'Review summary (from JSON)'),
-            (ZH_SOURCE, 'code-review-zh', '审查摘要（来自 JSON）'),
+            (SOURCE, 'code-review-gate', 'Review summary (from JSON)'),
+            (ZH_SOURCE, 'code-review-gate-zh', '审查摘要（来自 JSON）'),
         ):
             for location in ('.claude/skills/' + name, 'custom ' + name):
                 with self.subTest(source=name, location=location):
@@ -77,7 +77,7 @@ class PortableInstallationTests(unittest.TestCase):
 
     @unittest.skipUnless(os.environ.get('CODE_REVIEW_TEST_BASH'), 'Bash is required')
     def test_shell_pipeline_resolves_installed_files_and_project_rules(self):
-        self.install('.claude/skills/code-review')
+        self.install('.claude/skills/code-review-gate')
         for args in (['git', 'init', '--quiet'],
                      ['git', '-c', 'core.hooksPath=/dev/null', '-c', 'commit.gpgsign=false',
                       '-c', 'user.name=Release Test', '-c', 'user.email=release-test@example.invalid',

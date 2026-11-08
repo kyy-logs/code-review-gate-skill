@@ -18,8 +18,8 @@ SOURCES = (
     'sync-results.py',
 )
 PACKAGES = (
-    Path('skills/code-review/scripts'),
-    Path('skills/code-review-zh/scripts'),
+    Path('skills/code-review-gate/scripts'),
+    Path('skills/code-review-gate-zh/scripts'),
 )
 
 

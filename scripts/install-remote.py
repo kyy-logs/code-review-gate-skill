@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Download code-review into a temporary checkout and run its installer.
+"""Download code-review-gate into a temporary checkout and run its installer.
 
 This entry also works via ``python -c``; it does not depend on __file__.
 Only the Python standard library and Git are needed to install the files.
@@ -21,7 +21,7 @@ DEFAULT_REF = "main"
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Download and install the code-review skill.")
+        description="Download and install the code-review-gate skill.")
     parser.add_argument("--agent", required=True, choices=("claude-code", "codex", "both"))
     parser.add_argument("--lang", default="en", choices=("en", "zh-CN"),
                         help="skill language to install (default: en)")
@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with tempfile.TemporaryDirectory(prefix="code-review-download-") as temporary:
             checkout = Path(temporary) / "source"
-            print("Downloading code-review (" + args.ref + ")...", file=sys.stderr)
+            print("Downloading code-review-gate (" + args.ref + ")...", file=sys.stderr)
             download = subprocess.run(
                 ["git", "clone", "--config", "core.autocrlf=false", "--depth", "1",
                  "--single-branch", "--branch", args.ref,

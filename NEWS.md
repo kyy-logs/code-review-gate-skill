@@ -8,6 +8,12 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
+_No user-facing changes since the latest release._
+
+<!-- UNRELEASED:END -->
+
+## v0.2.0 (2026-11-08)
+
 ### Added
 
 - code-review: add review-snapshot freshness gate
@@ -16,7 +22,9 @@ and evaluation artifacts out of this file.
 
 - code-review: harden review snapshot edge cases
 
-<!-- UNRELEASED:END -->
+### Breaking Changes
+
+- code-review: rename skills to code-review-gate
 
 ## v0.1.1 (2026-11-05)
 

@@ -17,8 +17,8 @@ import yaml
 
 
 PACKAGES = (
-    ('en', Path('skills/code-review')),
-    ('zh-CN', Path('skills/code-review-zh')),
+    ('en', Path('skills/code-review-gate')),
+    ('zh-CN', Path('skills/code-review-gate-zh')),
 )
 PROBE_FIELDS = ('name', 'file', 'required', 'requires', 'params')
 RULE_HEADING = re.compile(r'^### ([A-Za-z][A-Za-z0-9._-]*) \[(HIGH|MEDIUM|LOW)\]', re.M)
@@ -124,7 +124,7 @@ def check(root):
 
     for lang, relative in PACKAGES:
         package = root / relative
-        expected_name = 'code-review-zh' if lang == 'zh-CN' else 'code-review'
+        expected_name = 'code-review-gate-zh' if lang == 'zh-CN' else 'code-review-gate'
         try:
             actual_name = frontmatter_name(package / 'SKILL.md')
             if actual_name != expected_name:

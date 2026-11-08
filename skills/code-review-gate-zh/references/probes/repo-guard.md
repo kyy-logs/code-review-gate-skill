@@ -2,6 +2,8 @@
 
 **required: true** ｜ **requires: rules** ｜ `read_only: true`
 
+先读 [`common.md`](common.md)；它定义了所有探针共同遵守的约束。
+
 ## 1. 选择规则包
 
 1. `$CODE_REVIEW_RULES_DIR` 非空时，使用指定路径；路径不存在或不可读时记为 `error`，不回退。
@@ -19,7 +21,6 @@
    `bash "$CODE_REVIEW_SKILL_DIR/scripts/rule-grep"`。
    脚本扫描文件全文，命中位置可能包含旧代码。
 3. **AI 复核**：结合对应规则、代码上下文和本轮差异，确认是否确实违规。
-   仅将本次改动引入或触发的问题纳入 finding；无关旧问题单独记录，不计入本轮计数。
 
 无法用模式判断的相关规则，转入第 3 节。
 磁盘文件与审查目标版本不一致时，读取目标版本源码，按第 3 节进行 AI 语义检查。
