@@ -1,0 +1,124 @@
+{
+  "suite_id": "aacr-behavior-2026-11-08",
+  "status": "v1 case corpus with a 0.2.0 baseline for all 7 cases (2026-11-08)",
+  "purpose": "model regression suite for code-review behavior probes",
+  "canonical_skill_note": "Each run must freeze its own skill tree; evidence below may come from different versions.",
+  "cases": [
+    {
+      "id": "spring-ai-alibaba-869",
+      "kind": "behavior",
+      "source_run": "eval/aacr-round2/2026-11-04/runs/20261104-113447-spring-ai-alibaba-869",
+      "expected": "strict target 0/3; record extra sourceLanguage finding separately",
+      "evidence_status": "current 0.2.0 measured 2026-11-08: 0/3, same as historical",
+      "reuse": "no",
+      "source_path": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261104-113447-spring-ai-alibaba-869",
+      "target_check": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261104-113447-spring-ai-alibaba-869\\TARGET-CHECK.json",
+      "inputs": {
+        "diff.patch": "4c6ac42fb414554aa7a1aad100a040de151e05f2f2ca7d768f42a0ff1f5949b7",
+        "scope.json": "967e1311a2bdaf05c7280066372a85eea08fc2bbd5a5a747da5327ac9e66c9a4",
+        "CHANGE.md": "e44a5793f32e30a15e5c95aa7aca65ac33d0f738c53d62fae7832ad4d406feb7"
+      },
+      "current_run": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-869"
+    },
+    {
+      "id": "spring-ai-alibaba-903",
+      "kind": "behavior",
+      "source_run": "eval/aacr-round2/2026-11-04/runs/20261104-181631-spring-ai-alibaba-903-correct",
+      "expected": "strict target 0/3; record extra scroll/click finding separately",
+      "evidence_status": "current 0.2.0 measured 2026-11-08: 0/3, same as historical",
+      "reuse": "no",
+      "source_path": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261104-181631-spring-ai-alibaba-903-correct",
+      "target_check": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261104-181631-spring-ai-alibaba-903-correct\\TARGET-CHECK.json",
+      "inputs": {
+        "diff.patch": "dd6da5ab0cf34feec60640b2709bdddaabd9fc4e62fd7f607c7453beb5251d85",
+        "scope.json": "962e356871df6bda03d969f6b9b4074013650f1de4a6418582ddce8719c99e4a",
+        "CHANGE.md": "0885fa7e45654a5ca268de46a7cf4af024d03603dba7dae582beae6db04e07e3"
+      },
+      "current_run": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-903"
+    },
+    {
+      "id": "dbeaver-38915",
+      "kind": "behavior",
+      "source_run": "eval/aacr-round2/2026-11-04/runs/20261108-141720-dbeaver-38915-snapshot-only",
+      "expected": "target 2 bootstrap responsibility must be reported; target 0/1 are maintainability",
+      "evidence_status": "2026-11-08 repeats both missed; unverified_items is the correct classification; target 2 downgraded to observational",
+      "reuse": "yes for snapshot-only evidence",
+      "source_path": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261108-141720-dbeaver-38915-snapshot-only",
+      "target_check": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261108-141720-dbeaver-38915-snapshot-only\\TARGET-CHECK.json",
+      "inputs": {
+        "diff.patch": "b7b4e38e1bb3159ed4f3944862eceb2658e9b2815850818d84daa767ad7e8c01",
+        "scope.json": "0d888a6d3d59f21f00de65301f189690ea21599a60c82bb43ffa5570f6410ae6",
+        "CHANGE.md": "97100c229001694f6a97585d74dbfb33e695fd62e809fe71fdd29eb70bb24374"
+      },
+      "acceptance": "observational only"
+    },
+    {
+      "id": "x04",
+      "kind": "behavior",
+      "source_run": "eval/diagnostics-runs/20261107-002713-x04-search-narrow",
+      "expected": "A and B must both be reported; A should be high, B medium",
+      "evidence_status": "current narrow-rule evidence A high / B medium; common-only version missed A",
+      "reuse": "yes for narrow-rule evidence",
+      "source_path": "D:/projects/code-review-publish\\eval/diagnostics-runs/20261107-002713-x04-search-narrow",
+      "target_check": "D:/projects/code-review-publish\\eval/diagnostics-runs/20261107-002713-x04-search-narrow\\TARGET-CHECK.json",
+      "inputs": {
+        "diff.patch": "b9eda8bc288ccf737bcc2b14bd4ba4144156be9a3a816ee9a3e4ba3d7631e213",
+        "scope.json": "f5c69233939255ac5681022144e7f319ab5b0c1c3fda5455fe4e34589725012d",
+        "CHANGE.md": "f867031cf2c748a26400118da114b58e8f6f61fab1cb721c0eb11334bae443f7"
+      }
+    },
+    {
+      "id": "c04",
+      "kind": "normal-fix-control",
+      "source_run": "eval/diagnostics-runs/20261108-142753-c04-snapshot-only",
+      "expected": "A fixed and not reported; B medium; no new false positive",
+      "evidence_status": "snapshot-only branch passed",
+      "reuse": "yes for snapshot-only evidence",
+      "source_path": "D:/projects/code-review-publish\\eval/diagnostics-runs/20261108-142753-c04-snapshot-only",
+      "target_check": "D:/projects/code-review-publish\\eval/diagnostics-runs/20261108-142753-c04-snapshot-only\\TARGET-CHECK.json",
+      "inputs": {
+        "diff.patch": "01cc863ab2a88b1662b72e7cdd0b6c7bb57c72abd7b07d89228c802f628acbd5",
+        "scope.json": "554ebe22d232e463b50f7b022b01ef15a00a972f4c450c928a063748b55439d1",
+        "CHANGE.md": "f867031cf2c748a26400118da114b58e8f6f61fab1cb721c0eb11334bae443f7"
+      }
+    },
+    {
+      "id": "dbeaver-37564",
+      "kind": "behavior",
+      "source_run": "eval/aacr-round2/2026-11-04/runs/20261107-002143-dbeaver-37564-search-narrow",
+      "expected": "InputStream resource leak must be reported; exists-redundancy target is known miss",
+      "evidence_status": "narrow-rule evidence leak medium hit",
+      "reuse": "yes for narrow-rule evidence",
+      "source_path": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261107-002143-dbeaver-37564-search-narrow",
+      "target_check": "D:/projects/code-review-publish\\eval/aacr-round2/2026-11-04/runs/20261107-002143-dbeaver-37564-search-narrow\\TARGET-CHECK.json",
+      "inputs": {
+        "diff.patch": "0e13f66ae0459d2ec464ca0cb9f59dad3fdf818ad61f80f32b4a1611cd6fb4eb",
+        "scope.json": "cfa7cff04360602396f95a6fcf2d21a5aacdfc3c95df79d71daf0e2c3fa8ac51",
+        "CHANGE.md": "a7f247760c9697ee2332631027973d5ebe219e1bde8cf0a5990063905cae3828"
+      }
+    },
+    {
+      "id": "clean-control",
+      "kind": "clean-control",
+      "source_run": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control",
+      "expected": "no target finding and no new false positive",
+      "evidence_status": "current 0.2.0 measured 2026-11-08: passed with 0 findings",
+      "reuse": "yes",
+      "target_check": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control/TARGET-CHECK.json",
+      "source_path": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control",
+      "inputs": {
+        "diff.patch": "b9447d094e85d4ede330528f75375d548f83f483f8b47517a59b6509a9873e5a",
+        "scope.json": "d3bf212802ceb70348eb5c934106ad7415e2a8d4d21426591f73dbc4e6cca8d8",
+        "CHANGE.md": "3079223f882a2b125c30daceb6da8c1f77299f49f7c421cee2faf911e0396e48"
+      }
+    }
+  ],
+  "clean_control": "present (2026-11-08 run, passed)",
+  "acceptance": {
+    "targets": "target checks must be evaluated independently of prose",
+    "false_positives": "record target-external findings separately",
+    "stability": "key cases should pass in at least 2 of 3 repeated runs before release",
+    "cost": "record wall time, requests, tools, and output tokens; do not use as a hard gate"
+  },
+  "baseline": "eval/regression-suite/2026-11-08/baseline-snapshot-only/BASELINE.json"
+}

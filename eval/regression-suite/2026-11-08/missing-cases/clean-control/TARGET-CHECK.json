@@ -1,0 +1,14 @@
+{
+  "case_id": "clean-control",
+  "kind": "clean-control",
+  "skill": "current 0.2.0 (code-review-gate, post-merge)",
+  "run_dir": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control",
+  "diff": "one Javadoc comment added to AliTranslateProperties.getRegion(); no behavior change",
+  "expected": "no target finding and no new false positive",
+  "findings": 0,
+  "unverified_items": 0,
+  "probe_status": "passed",
+  "wall_ms": 17405,
+  "timed_out": false,
+  "result": "pass"
+}

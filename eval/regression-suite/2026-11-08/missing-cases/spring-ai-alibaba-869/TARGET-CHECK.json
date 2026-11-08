@@ -1,0 +1,46 @@
+{
+  "case_id": "spring-ai-alibaba-869",
+  "skill": "current 0.2.0 (code-review-gate, post-merge)",
+  "run_dir": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-869",
+  "targets_total": 3,
+  "hits": 0,
+  "targets": [
+    {
+      "target_index": 0,
+      "location": "AliTranslateAutoConfiguration.java:38",
+      "category": "Maintainability",
+      "status": "not_mentioned",
+      "reported_as_finding": false
+    },
+    {
+      "target_index": 1,
+      "location": "AliTranslateProperties.java:34",
+      "category": "Security",
+      "status": "not_mentioned",
+      "reported_as_finding": false,
+      "note": "New run never mentions AliTranslateProperties or ACCESS_KEY/ALITRANSLATE_ env names."
+    },
+    {
+      "target_index": 2,
+      "location": "AliTranslateProperties.java:38",
+      "category": "Maintainability",
+      "status": "not_mentioned",
+      "reported_as_finding": false
+    }
+  ],
+  "extra_findings": {
+    "count": 1,
+    "items": [
+      {
+        "severity": "high",
+        "probe": "behavior-review",
+        "summary": "sourceLanguage rejected instead of defaulted on tool-call deserialization path"
+      }
+    ]
+  },
+  "unverified_items": 3,
+  "probe_status": "failed",
+  "wall_ms": 393765,
+  "timed_out": false,
+  "conclusion": "0/3 targets, same as the historical old-skill run. Only the sourceLanguage high finding was produced; target 1 (env var prefix) is still completely unmentioned."
+}

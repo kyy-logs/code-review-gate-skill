@@ -1,0 +1,35 @@
+{
+  "case_id": "x04",
+  "target_definition": "A high at StatisticsExtension.java:267; B medium at StatisticsExtension.java:221",
+  "samples": {
+    "best_141c362_run1": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261107-002713-x04-search-narrow",
+      "skill_tree_sha256": "25b85154d9af74fdd194cc05231dcd0a14cf423e37565c034185539c70d87600",
+      "A": "high (hit)",
+      "B": "medium (hit)",
+      "result": "pass"
+    },
+    "best_141c362_run2": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261108-165546-x04-search-narrow-r2",
+      "skill_tree_sha256": "25b85154d9af74fdd194cc05231dcd0a14cf423e37565c034185539c70d87600",
+      "A": "medium (below target)",
+      "B": "not reported",
+      "result": "fail"
+    },
+    "current_0.2.0_run1": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-163751-x04-release020",
+      "skill_tree_sha256": "ff0847a969344ba5c030a2a496a87cd35acd026f5f4ce5038b449ff3a8d21eff",
+      "A": "medium (below target)",
+      "B": "medium (hit)",
+      "result": "fail (A severity)"
+    },
+    "current_0.2.0_run2": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-165036-x04-release020-r2",
+      "skill_tree_sha256": "ff0847a969344ba5c030a2a496a87cd35acd026f5f4ce5038b449ff3a8d21eff",
+      "A": "not reported",
+      "B": "not reported",
+      "result": "fail"
+    }
+  },
+  "conclusion": "The single best x04 run is not reproducible on the same 141c362 skill: repeat A medium, B missing. Best-run output cannot be used as a stable baseline/target without 2/3 repetition."
+}
