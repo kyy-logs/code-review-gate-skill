@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill sources live in [`skills/code-review-gate/`](skills/code-review-gate/) (English) and [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.1.1`; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review-gate/`](skills/code-review-gate/) (English) and [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.2.0`; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -19,23 +19,26 @@ It never modifies the code under review.
 ## Latest news
 
 <!-- NEWS:START -->
-### v0.1.1 (2026-11-05)
+### v0.2.0 (2026-11-08)
 
 #### Added
 
-- code-review: surface unverified items and tighten behavior checks
-- release: publish stable versions after validated VERSION changes
+- code-review: add review-snapshot freshness gate
 
 #### Fixed
 
-- code-review: return immediately after saving probe JSON
+- code-review: harden review snapshot edge cases
+
+#### Breaking Changes
+
+- code-review: rename skills to code-review-gate
 
 [Full update history](NEWS.md)
 <!-- NEWS:END -->
 
 ## Release status
 
-`v0.1.1` is a stable release within the scope described below.
+`v0.2.0` is a stable release within the scope described below.
 Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
 
 - **Severity is three levels:** `high`, `medium`, `low`. Records written by the
