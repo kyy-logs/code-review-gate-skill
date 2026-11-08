@@ -10,11 +10,11 @@ and evaluation artifacts out of this file.
 
 ### Added
 
-- code-review: pin the reviewed source in `review-snapshot.json`; `gate-pass code-review` now returns `stale-review` when the worktree or commit target changes after review.
+- code-review: add review-snapshot freshness gate
 
-### Changed
+### Fixed
 
-- code-review: `init` accepts `--mode worktree|commits [--base] [--head]` and writes the snapshot; `snapshot <slug>` re-pins the source after a fix. Runs without `--mode` keep the legacy behavior and skip freshness checking.
+- code-review: harden review snapshot edge cases
 
 <!-- UNRELEASED:END -->
 
