@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill sources live in [`skills/code-review/`](skills/code-review/) (English) and [`skills/code-review-zh/`](skills/code-review-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.1.1`; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review-gate/`](skills/code-review-gate/) (English) and [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.1.1`; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -91,10 +91,10 @@ Run this command **inside your project**:
 
 ```bash
 # English (default)
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review --yes
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate --yes
 
 # Chinese
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-zh --yes
+npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate-zh --yes
 ```
 
 Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/<skill>/`; Claude Code installs to `.claude/skills/<skill>/`. Node.js 22.20+ is required. Install one language per project. The Python installers also accept `--lang en|zh-CN` and default to English.
@@ -104,19 +104,19 @@ Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/<sk
 Ask in Claude Code:
 
 ```text
-Review these changes with code-review.
+Review these changes with code-review-gate.
 ```
 
 Or invoke the skill directly:
 
 ```text
-/code-review
+/code-review-gate
 ```
 
 For a fixed range:
 
 ```text
-Use code-review on commits abc123..def456
+Use code-review-gate on commits abc123..def456
 ```
 
 The skill supports two review modes:
@@ -296,12 +296,12 @@ code-review-skill/
 │   ├── rule-grep
 │   └── sync-results.py
 ├── skills/
-│   ├── code-review/
+│   ├── code-review-gate/
 │   │   ├── SKILL.md
 │   │   ├── assets/
 │   │   ├── references/
 │   │   └── scripts/
-│   └── code-review-zh/
+│   └── code-review-gate-zh/
 │       ├── SKILL.md
 │       ├── assets/
 │       ├── references/

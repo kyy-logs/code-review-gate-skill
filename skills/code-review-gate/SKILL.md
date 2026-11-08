@@ -1,5 +1,5 @@
 ---
-name: code-review
+name: code-review-gate
 description: Use when code has been written, before committing, or when merging a PR; also when the user says "review my code", "check before commit", "take a look at this change", "PR review", or asks for a strict review/merge gate.
 ---
 
@@ -86,27 +86,17 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
 3. **Run probes in parallel**:
 
-   **Dispatch**: the main executor dispatches an independent agent per probe according to the registry, providing the review scope, diff, project root, skill path, and that probe's inputs and `params`, and including in the dispatch prompt "Execution boundary" above and "Shared probe constraints" in this step.
+   **Dispatch**: the main executor dispatches an independent agent per probe according to the registry, providing the review scope, diff, project root, skill path, that probe's inputs and `params`, the path to `references/probes/common.md`, and the "Execution boundary" above. Require each agent to read `common.md` before its probe-specific document.
    Also pass any provided requirements, acceptance criteria, and change context as text or file paths, and ask each probe to read relevant material. Note missing inputs without inventing them.
    If dependency source or contract material is already available, pass its path, version, and origin for on-demand reuse; do not pre-download all dependencies.
 
    The agent reads the instructions pointed to by the registry entry's `file` and `references/output-schema.md`, and executes according to the parameters.
    Run in batches when concurrent slots are insufficient; if independent agents are unavailable, run serially and record the limitation.
 
-   **Shared probe constraints (include in dispatch)**: an agent checks only its own probe, and does not re-run the whole process or dispatch further agents; the source version follows step 1.
-   A finding must explain how this change introduced or triggered the issue; unrelated pre-existing issues are described separately and are not included in this round's finding list or counts.
-
-   Reuse the review scope and material confirmed and handed off by the main executor, together with context already read by this agent.
-   Read more as needed; merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
-   Limit local searches to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates. Prefer `rg`, starting with changed files and known relevant directories and narrowing by file type; return only paths when locating files.
-   Expand the scope only for a specific evidence gap; avoid searching the whole repository with `grep -r` and then filtering the output. Record missing or unreadable evidence without expanding to the disk root or user directory, or repeating searches without a new lead.
-
-   Write only `{output_root}/active/{slug}/probes/<probe-name>.json`, not shared reports or metrics. Save identified but unresolved specific concerns in `unverified_items` under the output contract, rather than only in the return message.
-   Once checks are complete, first wait for any background tasks you started to finish, or stop tasks that are no longer needed and confirm they have exited. Then validate against the output contract, save the final JSON, and immediately return the handoff message. After saving, do not search, gather more evidence, or repeat explanations of findings.
+   **Shared probe constraints**: defined once in `references/probes/common.md`. Include its path in every dispatch; do not repeat or paraphrase the rules per probe.
 
    **Handoff**: every probe must have JSON for this run. Record skip or error reasons according to the output contract; on execution errors, preserve findings already made and let the other probes continue. If an agent fails to start or returns no valid result, the main executor records `error` and the reason without reusing old results.
-   The return message only briefly states the JSON path, the actual checked scope, and necessary limitations, including specific evidence gaps; the main executor incorporates the relevant limitations into the final report.
-   Record `duration` when reliable timing is available; the sum of per-probe durations does not represent this round's wall-clock time.
+
    `test-coverage` hands off the report path, target version, numerator/denominator, and percentage for valid coverage via its return message,
    and the main executor reports them; `--line` accepts only diff line coverage:
    ```bash

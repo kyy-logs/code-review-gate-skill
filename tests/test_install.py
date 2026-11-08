@@ -11,7 +11,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "scripts" / "install.py"
-SKILL = ROOT / "skills" / "code-review"
+SKILL = ROOT / "skills" / "code-review-gate"
 
 
 class InstallerTests(unittest.TestCase):
@@ -33,19 +33,19 @@ class InstallerTests(unittest.TestCase):
     def test_zh_language_installs_code_review_zh(self):
         result = self.install("--agent", "codex", "--lang", "zh-CN")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".agents/skills/code-review-zh/SKILL.md").is_file())
-        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+        self.assertTrue((self.project / ".agents/skills/code-review-gate-zh/SKILL.md").is_file())
+        self.assertFalse((self.project / ".agents/skills/code-review-gate").exists())
 
     def test_both_hosts_honor_language(self):
         result = self.install("--agent", "both", "--lang", "zh-CN")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".claude/skills/code-review-zh/SKILL.md").is_file())
-        self.assertTrue((self.project / ".agents/skills/code-review-zh/SKILL.md").is_file())
-        self.assertFalse((self.project / ".claude/skills/code-review").exists())
-        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+        self.assertTrue((self.project / ".claude/skills/code-review-gate-zh/SKILL.md").is_file())
+        self.assertTrue((self.project / ".agents/skills/code-review-gate-zh/SKILL.md").is_file())
+        self.assertFalse((self.project / ".claude/skills/code-review-gate").exists())
+        self.assertFalse((self.project / ".agents/skills/code-review-gate").exists())
 
     def test_other_language_blocks_install_even_with_force(self):
-        other = self.project / ".agents/skills/code-review-zh"
+        other = self.project / ".agents/skills/code-review-gate-zh"
         other.mkdir(parents=True)
         (other / "custom.txt").write_text("keep me\n", encoding="utf-8")
         for extra in ((), ("--force",)):
@@ -54,7 +54,7 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertIn("another language", result.stderr)
                 self.assertEqual((other / "custom.txt").read_text(encoding="utf-8"), "keep me\n")
-        self.assertFalse((self.project / ".agents/skills/code-review").exists())
+        self.assertFalse((self.project / ".agents/skills/code-review-gate").exists())
 
     def test_invalid_language_writes_nothing(self):
         result = self.install("--agent", "codex", "--lang", "zh")
@@ -64,7 +64,7 @@ class InstallerTests(unittest.TestCase):
     def test_claude_installation_installs_skill_only(self):
         result = self.install("--agent", "claude-code")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".claude/skills/code-review/SKILL.md").is_file())
+        self.assertTrue((self.project / ".claude/skills/code-review-gate/SKILL.md").is_file())
         self.assertFalse((self.project / ".claude/agents").exists())
         self.assertFalse((self.project / ".codex").exists())
         self.assertFalse((self.project / ".agents").exists())
@@ -72,54 +72,54 @@ class InstallerTests(unittest.TestCase):
     def test_codex_installation_installs_skill_only(self):
         result = self.install("--agent", "codex")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".agents/skills/code-review/SKILL.md").is_file())
+        self.assertTrue((self.project / ".agents/skills/code-review-gate/SKILL.md").is_file())
         self.assertFalse((self.project / ".codex").exists())
         self.assertFalse((self.project / ".claude").exists())
 
     def test_both_hosts_install_together(self):
         result = self.install("--agent", "both")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".claude/skills/code-review/SKILL.md").is_file())
-        self.assertTrue((self.project / ".agents/skills/code-review/SKILL.md").is_file())
+        self.assertTrue((self.project / ".claude/skills/code-review-gate/SKILL.md").is_file())
+        self.assertTrue((self.project / ".agents/skills/code-review-gate/SKILL.md").is_file())
         self.assertFalse((self.project / ".claude/agents").exists())
         self.assertFalse((self.project / ".codex").exists())
 
     def test_repeat_install_is_a_noop(self):
         self.assertEqual(self.install("--agent", "codex").returncode, 0)
-        skill = self.project / ".agents/skills/code-review/SKILL.md"
+        skill = self.project / ".agents/skills/code-review-gate/SKILL.md"
         before = (skill.stat().st_mtime_ns, skill.read_bytes())
         result = self.install("--agent", "codex")
         self.assertEqual(result.returncode, 0, result.stderr)
         after = (skill.stat().st_mtime_ns, skill.read_bytes())
         self.assertEqual(before, after)
-        self.assertIn("unchanged .agents/skills/code-review", result.stdout)
+        self.assertIn("unchanged .agents/skills/code-review-gate", result.stdout)
 
     def test_existing_skill_directory_is_protected(self):
-        skill = self.project / ".agents/skills/code-review"
+        skill = self.project / ".agents/skills/code-review-gate"
         skill.mkdir(parents=True)
         (skill / "custom.txt").write_text("user file\n", encoding="utf-8")
         result = self.install("--agent", "codex")
         self.assertEqual(result.returncode, 2)
-        self.assertIn(".agents/skills/code-review", result.stderr)
+        self.assertIn(".agents/skills/code-review-gate", result.stderr)
         self.assertEqual((skill / "custom.txt").read_text(encoding="utf-8"), "user file\n")
         self.assertFalse((self.project / ".claude").exists())
 
     def test_force_backs_up_existing_skill_directory(self):
-        skill = self.project / ".agents/skills/code-review"
+        skill = self.project / ".agents/skills/code-review-gate"
         skill.mkdir(parents=True)
         (skill / "custom.txt").write_text("user file\n", encoding="utf-8")
         result = self.install("--agent", "codex", "--force")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue((skill / "SKILL.md").is_file())
-        backups = list(skill.parent.glob("code-review.bak.*"))
+        backups = list(skill.parent.glob("code-review-gate.bak.*"))
         self.assertEqual(len(backups), 1)
         self.assertEqual((backups[0] / "custom.txt").read_text(encoding="utf-8"), "user file\n")
 
     def test_dry_run_writes_nothing(self):
         result = self.install("--agent", "both", "--dry-run")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("would create .claude/skills/code-review", result.stdout)
-        self.assertIn("would create .agents/skills/code-review", result.stdout)
+        self.assertIn("would create .claude/skills/code-review-gate", result.stdout)
+        self.assertIn("would create .agents/skills/code-review-gate", result.stdout)
         self.assertFalse((self.project / ".claude").exists())
         self.assertFalse((self.project / ".agents").exists())
         self.assertFalse((self.project / ".codex").exists())
@@ -143,7 +143,7 @@ class InstallerTests(unittest.TestCase):
             cwd=ROOT, env=self.environment, capture_output=True, text=True,
             encoding="utf-8", timeout=30)
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.project / ".agents/skills/code-review/SKILL.md").is_file())
+        self.assertTrue((self.project / ".agents/skills/code-review-gate/SKILL.md").is_file())
 
 
 if __name__ == "__main__":

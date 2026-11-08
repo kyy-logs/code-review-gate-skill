@@ -16,6 +16,10 @@ and evaluation artifacts out of this file.
 
 - code-review: harden review snapshot edge cases
 
+### Breaking Changes
+
+- code-review: rename skills to code-review-gate
+
 <!-- UNRELEASED:END -->
 
 ## v0.1.1 (2026-11-05)

@@ -80,8 +80,8 @@ class UnverifiedItemsTests(BehaviorFixture, unittest.TestCase):
                 self.assertEqual(report.read_bytes(), before)
 
     def test_items_render_beside_findings_in_both_languages(self):
-        for locale, heading in (('code-review', 'Pending confirmation'),
-                                ('code-review-zh', '待确认')):
+        for locale, heading in (('code-review-gate', 'Pending confirmation'),
+                                ('code-review-gate-zh', '待确认')):
             with self.subTest(locale=locale):
                 self.package = ROOT / 'skills' / locale
                 report = self.review / 'code-review.md'

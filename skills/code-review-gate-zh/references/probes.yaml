@@ -1,4 +1,4 @@
-# code-review 探针注册表：维护探针清单、依赖和参数。
+# code-review-gate 探针注册表：维护探针清单、依赖和参数。
 # required / requires 及执行状态的含义见 references/output-schema.md 第 4 节。
 
 version: 1

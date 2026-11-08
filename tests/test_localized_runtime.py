@@ -11,8 +11,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EN = ROOT / 'skills/code-review'
-ZH = ROOT / 'skills/code-review-zh'
+EN = ROOT / 'skills/code-review-gate'
+ZH = ROOT / 'skills/code-review-gate-zh'
 PROBES = ('behavior-review', 'test-coverage', 'repo-guard', 'impact-analysis')
 
 
@@ -185,7 +185,7 @@ class RuleGrepLocalizationTests(unittest.TestCase):
         env = dict(os.environ, CODE_REVIEW_RULES_DIR=str(self.rules))
         return subprocess.run([
             os.environ['CODE_REVIEW_TEST_BASH'],
-            str(ROOT / 'skills/code-review/scripts/rule-grep'), *args
+            str(ROOT / 'skills/code-review-gate/scripts/rule-grep'), *args
         ], env=env, capture_output=True, text=True, encoding='utf-8', timeout=30)
 
     def test_bilingual_detection_labels_and_semantic_marker(self):
@@ -205,7 +205,7 @@ class RuleGrepLocalizationTests(unittest.TestCase):
         self.assertNotIn('baz', result.stdout)
 
     def test_existing_rules_still_list(self):
-        shutil.copytree(ROOT / 'skills/code-review/references/rules', self.rules,
+        shutil.copytree(ROOT / 'skills/code-review-gate/references/rules', self.rules,
                         dirs_exist_ok=True)
         result = self.run_grep('--list')
         self.assertEqual(result.returncode, 0, result.stderr)
