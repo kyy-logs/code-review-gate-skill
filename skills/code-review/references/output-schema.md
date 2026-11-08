@@ -85,6 +85,8 @@ Do not omit a proven behavioral defect solely because performance is unmeasured 
 
 When a boundary error is proven, unverified downstream UI / templates / integration layers are recorded only in `evidence` and do not lower the severity.
 
+When a public state query or state-machine contract is proven to return a wrong state, the wrong state is itself a contract-boundary error; do not downgrade it to `medium` because there are no callers, no data corruption was observed, or the impact is limited to concurrency resources.
+
 **3. Handling contract conflicts**
 
 When contracts, docs, or tests conflict, list both sides' bases in `evidence`. Only evidence that applies to the target version and explains the conflict can resolve it; "probably a typo / copy-paste / old comment" does not count as evidence.
