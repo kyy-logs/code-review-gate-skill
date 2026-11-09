@@ -10,7 +10,7 @@ and evaluation artifacts out of this file.
 
 ### Added
 
-- `collect-metrics finalize` renders and validates the report, then outputs the machine summary in one command; any failed step stops the sequence. English and Chinese skill instructions now use this command.
+- code-review: add finalize command for v0.2.1
 
 <!-- UNRELEASED:END -->
 
