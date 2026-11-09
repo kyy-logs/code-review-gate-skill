@@ -39,6 +39,8 @@ usage() {
       只读校验报告自动区域与 JSON 事实完全一致
   summary   <slug>
       先校验报告，再输出最终答复可引用的机器摘要（计数、ID、阻塞项）
+  finalize  <slug>
+      依次渲染、校验报告并输出机器摘要，任一步失败立即停止
   archive   <slug> [--profile P]
       渲染 quality-scorecard.txt 并更新 quality-trend.csv
   rollback  <slug>
@@ -337,9 +339,12 @@ case "$CMD" in
     review_report "$slug" "$action"
     ;;
 
-  summary)
+  summary|finalize)
     slug="${1:-}"; shift || true
-    [ -n "$slug" ] && [ "$#" -eq 0 ] || die "summary: 需要且仅接受一个 slug"
+    [ -n "$slug" ] && [ "$#" -eq 0 ] || die "$CMD: 需要且仅接受一个 slug"
+    if [ "$CMD" = finalize ]; then
+      review_report "$slug" --write-report >/dev/null
+    fi
     review_report "$slug" --check-report >/dev/null
     summary_report "$slug"
     ;;

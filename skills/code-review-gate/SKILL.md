@@ -134,11 +134,9 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
    The script displays `unverified_items` as "Pending confirmation" in Findings without including them in severity counts; original records retain their IDs, evidence, and counts; when showing the number of distinct issues, group them by the same root cause and consequence and list the corresponding IDs, without raising severity due to duplication or substituting the displayed count for probe or reconciliation counts.
 
-   Run the following commands to generate the report's facts section from the JSON, validate the display, and obtain the final answer summary:
+   Run this command to generate the report's facts section from the JSON, validate the display, and obtain the final answer summary; it stops immediately if any step fails:
    ```bash
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" render-report {slug}
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" verify-report {slug}
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" summary {slug}
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" finalize {slug}
    ```
 
    The scripts update only the `code-review:probes` / `gate` marker regions under Findings and Review Conclusion, preserving other body text and raw JSON. Rendering validates before an atomic update and can be repeated; it stops when markers are missing or duplicated. Validation covers IDs, locations, evidence, severity, status, and counts.

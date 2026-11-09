@@ -8,7 +8,9 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
-_No user-facing changes since the latest release._
+### Added
+
+- `collect-metrics finalize` renders and validates the report, then outputs the machine summary in one command; any failed step stops the sequence. English and Chinese skill instructions now use this command.
 
 <!-- UNRELEASED:END -->
 

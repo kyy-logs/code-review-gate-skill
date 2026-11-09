@@ -134,11 +134,9 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 
    `unverified_items` 由脚本以“待确认”展示在问题区，不计入各级 finding 数量；原始记录保留 ID、证据及计数；展示独立问题数量时按同一根因和后果归组并列明对应 ID，不因重复提高严重级别，也不以展示数量替代探针或对账计数。
 
-   执行以下命令，从 JSON 生成报告事实区、校验展示并取得最终答复摘要：
+   执行以下命令，从 JSON 生成报告事实区、校验展示并取得最终答复摘要；任一步失败立即停止：
    ```bash
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" render-report {slug}
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" verify-report {slug}
-   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" summary {slug}
+   bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" finalize {slug}
    ```
 
    脚本只更新报告“发现的问题”和“审查结论”中的 `code-review:probes` / `gate` 标记区域，保留其他正文和原始 JSON。渲染先校验再原子更新，可重复执行；标记缺失或重复时停止。校验覆盖 ID、位置、证据、严重级别、状态和计数。
