@@ -57,13 +57,17 @@
 分开记录测试质量、覆盖率状态和未验证项。
 `passed` 不代表测试已运行或覆盖率已测量。
 
-## 5. JaCoCo 报告解析细节（处理 XML 时读取）
+## 5. JaCoCo 增量行计算（处理 XML 时读取）
 
-1. 按项目源集识别生产源码和测试，提取目标版本生产源码的新增或修改行，排除删除行。
-2. 按模块、源码路径和改动行号匹配 `<sourcefile>` / `<line nr="…" mi="…" ci="…">`。
-   `mi + ci > 0` 计入分母，`ci > 0` 计为已覆盖。
-3. 每个“模块 + 源码路径 + 行号”只计一次；汇总后计算比例，不平均各文件百分比。
-4. 缺少必要数据记 `error`，不得当作非可执行行排除或记为“不适用”。
+先核实报告对应本轮目标版本，完整包含指定生产源集，且有行号调试信息。确认后使用只读计算器：
 
-这是 [JaCoCo 的行覆盖口径](https://www.jacoco.org/jacoco/trunk/doc/counters.html)：
-一行至少有一条指令执行即计为已覆盖，不代表该行所有分支均被覆盖。
+```bash
+"${CODE_REVIEW_PYTHON:-python}" -X utf8 "$CODE_REVIEW_SKILL_DIR/scripts/coverage-diff.py" \
+  --project-root . --base {base} --head {head} \
+  --jacoco module/src/main/java module/target/site/jacoco/jacoco.xml \
+  --confirm-report-scope
+```
+
+- **输入**。未提交改动用 `--worktree` 替换 `--head {head}`。每个生产源码根目录传一组 `--jacoco 源码根目录 XML路径`，多模块重复传入；源码根目录使用项目相对 POSIX 路径、互不重叠，各配独立报告。`--confirm-report-scope` 声明上述报告条件已核实，脚本无法代为确认。
+- **输出**。读取 JSON 的 `status`、`covered_lines`、`executable_lines` 和 `percent`，按第 3 节判断及交接；`not_applicable` 表示无可执行增量行，失败按第 3 节记录 `error`。阈值比较使用整数分子和分母；`percent` 为小数字符串，不能直接传给仅接收整数的 `coverage --line`。
+- **交接**。计算结果写入相关 finding 的 `evidence` 及返回消息；探针 JSON 遵守 `references/output-schema.md`，不新增顶层 `coverage` 字段或嵌入整份计算结果。

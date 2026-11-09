@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Synchronize the shared review scripts into both installable skill packages.
 
-Only the four explicitly listed scripts are managed. Unknown files in a package
+Only the explicitly listed scripts are managed. Unknown files in a package
 are never deleted; --check reports them so they can be reviewed manually.
 """
 
@@ -16,6 +16,7 @@ SOURCES = (
     'lib-metrics',
     'rule-grep',
     'sync-results.py',
+    'coverage-diff.py',
 )
 PACKAGES = (
     Path('skills/code-review-gate/scripts'),
