@@ -8,11 +8,15 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
+_No user-facing changes since the latest release._
+
+<!-- UNRELEASED:END -->
+
+## v0.2.2 (2026-11-09)
+
 ### Added
 
 - coverage: add JaCoCo incremental line coverage calculator
-
-<!-- UNRELEASED:END -->
 
 ## v0.2.1 (2026-11-09)
 
