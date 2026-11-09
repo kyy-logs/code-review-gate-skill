@@ -1,4 +1,4 @@
-# code-review-skill
+# code-review-gate-skill
 
 English | [简体中文](README.zh-CN.md)
 
@@ -10,7 +10,7 @@ The skill sources live in [`skills/code-review-gate/`](skills/code-review-gate/)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![Static-first](https://img.shields.io/badge/review-static--first-2ea44f?style=flat-square)](#what-this-is-not)
-[![GitHub stars](https://img.shields.io/github/stars/kyy-logs/code-review-skill?style=flat-square&logo=github)](https://github.com/kyy-logs/code-review-skill/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/kyy-logs/code-review-gate-skill?style=flat-square&logo=github)](https://github.com/kyy-logs/code-review-gate-skill/stargazers)
 
 Most AI reviews stop at “this looks risky.” This skill produces a review you can audit: every finding points to a location, a contract or code path, and a severity; every gate decision is rendered from machine-readable JSON. It reads the diff, surrounding source, tests, and project rules — no build, test run, or coverage report required.
 
@@ -86,10 +86,10 @@ Run this command **inside your project**:
 
 ```bash
 # English (default)
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate --yes
+npx -y skills add kyy-logs/code-review-gate-skill --agent codex --skill code-review-gate --yes
 
 # Chinese
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate-zh --yes
+npx -y skills add kyy-logs/code-review-gate-skill --agent codex --skill code-review-gate-zh --yes
 ```
 
 Use `--agent claude-code` for Claude Code. Codex installs to `.agents/skills/<skill>/`; Claude Code installs to `.claude/skills/<skill>/`. Node.js 22.20+ is required. Install one language per project. The Python installers also accept `--lang en|zh-CN` and default to English.
@@ -262,7 +262,7 @@ The evaluation harness and raw reports are kept out of the published repository.
 ## Repository layout
 
 ```text
-code-review-skill/
+code-review-gate-skill/
 ├── README.md
 ├── README.zh-CN.md
 ├── NEWS.md
@@ -305,7 +305,7 @@ code-review-skill/
 
 ## Star history
 
-[![Star History Chart](https://raw.githubusercontent.com/kyy-logs/code-review-skill/star-history/star-history.svg)](https://star-history.com/#kyy-logs/code-review-skill&Date)
+[![Star History Chart](https://raw.githubusercontent.com/kyy-logs/code-review-gate-skill/star-history/star-history.svg)](https://star-history.com/#kyy-logs/code-review-gate-skill&Date)
 
 Updated daily by [`star-history.yml`](.github/workflows/star-history.yml).
 

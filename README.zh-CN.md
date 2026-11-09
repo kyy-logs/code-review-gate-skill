@@ -1,4 +1,4 @@
-# code-review-skill
+# code-review-gate-skill
 
 [English](README.md) | 简体中文
 
@@ -10,7 +10,7 @@
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
 [![Python 3.9+](https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![静态分析优先](https://img.shields.io/badge/review-static--first-2ea44f?style=flat-square)](#能力边界)
-[![GitHub stars](https://img.shields.io/github/stars/kyy-logs/code-review-skill?style=flat-square&logo=github)](https://github.com/kyy-logs/code-review-skill/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/kyy-logs/code-review-gate-skill?style=flat-square&logo=github)](https://github.com/kyy-logs/code-review-gate-skill/stargazers)
 
 许多 AI 审查只给出“这里可能有风险”的判断。这个 skill 生成可核对的审查结果：每条问题都有位置、契约或代码路径依据，以及严重级别；门禁结论由机器可读的 JSON 派生。审查会读取 diff、相关源码、测试和项目规范，无须先构建项目、运行测试或生成覆盖率报告。
 
@@ -20,7 +20,7 @@
 
 ### v0.2.3（2026-11-09）
 
-本版本更新根据提交记录自动整理，详见 [NEWS](NEWS.md) 和 [Release](https://github.com/kyy-logs/code-review-skill/releases/tag/v0.2.3)。
+本版本更新根据提交记录自动整理，详见 [NEWS](NEWS.md) 和 [Release](https://github.com/kyy-logs/code-review-gate-skill/releases/tag/v0.2.3)。
 
 ## 发布状态
 
@@ -72,10 +72,10 @@
 
 ```bash
 # 英文（默认）
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate --yes
+npx -y skills add kyy-logs/code-review-gate-skill --agent codex --skill code-review-gate --yes
 
 # 中文
-npx -y skills add kyy-logs/code-review-skill --agent codex --skill code-review-gate-zh --yes
+npx -y skills add kyy-logs/code-review-gate-skill --agent codex --skill code-review-gate-zh --yes
 ```
 
 Claude Code 使用 `--agent claude-code`。Codex 安装到 `.agents/skills/<skill>/`，Claude Code 安装到 `.claude/skills/<skill>/`。需要 Node.js 22.20+。项目内只安装一种语言。Python 安装器也支持 `--lang en|zh-CN`，默认英文。
@@ -243,7 +243,7 @@ export CODE_REVIEW_RULES_DIR=/path/to/rules
 ## 仓库结构
 
 ```text
-code-review-skill/
+code-review-gate-skill/
 ├── README.md
 ├── README.zh-CN.md
 ├── NEWS.md
@@ -286,7 +286,7 @@ code-review-skill/
 
 ## Star 趋势
 
-[![Star History Chart](https://raw.githubusercontent.com/kyy-logs/code-review-skill/star-history/star-history.svg)](https://star-history.com/#kyy-logs/code-review-skill&Date)
+[![Star History Chart](https://raw.githubusercontent.com/kyy-logs/code-review-gate-skill/star-history/star-history.svg)](https://star-history.com/#kyy-logs/code-review-gate-skill&Date)
 
 由 [`star-history.yml`](.github/workflows/star-history.yml) 每天自动更新。
 

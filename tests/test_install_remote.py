@@ -82,7 +82,7 @@ class RemoteInstallerTests(unittest.TestCase):
         self.assertEqual((skill / "fixture-version").read_text(), "selected release")
         self.assertFalse((self.project / ".codex").exists())
         self.assertFalse((self.project / ".claude").exists())
-        self.assertFalse((self.project / "code-review-skill").exists())
+        self.assertFalse((self.project / "code-review-gate-skill").exists())
 
     def test_zh_language_is_forwarded_to_installer(self):
         result = self.install("--agent", "codex", "--lang", "zh-CN")

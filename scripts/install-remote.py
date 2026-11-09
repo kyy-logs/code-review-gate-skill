@@ -15,7 +15,7 @@ import sys
 import tempfile
 
 
-REPOSITORY = "https://github.com/kyy-logs/code-review-skill.git"
+REPOSITORY = "https://github.com/kyy-logs/code-review-gate-skill.git"
 DEFAULT_REF = "main"
 
 
