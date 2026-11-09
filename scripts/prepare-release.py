@@ -88,7 +88,7 @@ def prepare(repo, validated, notes):
     zh = replace_once(zh, r'^## 最新动态\n[\s\S]*?(?=^## 发布状态)',
                       '## 最新动态\n\n### ' + tag + '（' + date + '）\n\n'
                       '本版本更新根据提交记录自动整理，详见 [NEWS](NEWS.md) 和 '
-                      '[Release](https://github.com/kyy-logs/code-review-skill/releases/tag/' + tag + ')。\n\n')
+                      '[Release](https://github.com/kyy-logs/code-review-gate-skill/releases/tag/' + tag + ')。\n\n')
     # Validate every document before writing any tracked file.
     for name, text in {'NEWS.md': news, 'README.md': en, 'README.zh-CN.md': zh}.items():
         (repo / name).write_text(text, encoding='utf-8')
