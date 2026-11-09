@@ -124,7 +124,6 @@ The skill supports two review modes:
 ```text
 docs/work/active/{slug}/
 ├── code-review.md      # human report
-├── policy.json
 ├── review-snapshot.json
 └── probes/
     ├── behavior-review.json
@@ -340,13 +339,13 @@ Optional `.code-review/config.json` (paths relative to the reviewed project):
 85% / 80% are configurable defaults. Line coverage blocks below target; branch coverage is advisory.
 Probes, gates, and reports use the same effective targets. `CODE_REVIEW_OUTPUT_DIR` overrides the output root;
 pass identical settings to every shell invocation. Source inspection is read-only, but the workflow writes
-`active/<slug>/code-review.md`, `probes/*.json`, `policy.json`, `review-snapshot.json`, root-level `workflow-events.log`,
+`active/<slug>/code-review.md`, `probes/*.json`, `review-snapshot.json`, root-level `workflow-events.log`,
 and scorecards / `quality-trend.csv` on archive.
 Start a new review with `bash "$CODE_REVIEW_SKILL_DIR/scripts/collect-metrics" init <unique-slug> --mode worktree`
 (or `--mode commits --base <base> [--head <head>]`). With `--mode`, init writes `review-snapshot.json`; new runs
 should always pass it. Omitting `--mode` keeps the legacy behavior and skips freshness checking.
 Existing active, archived, or event-history slugs are rejected. Re-rendering the same run updates only automatic report regions;
-do not run concurrent writers for the same run. policy.json records the initialization policy; keep configuration stable when
+do not run concurrent writers for the same run. The effective thresholds are returned by `init` and recorded in the generated report; keep configuration stable when
 resuming, and re-check findings and re-render after policy changes. `gate-pass code-review` recomputes `review-snapshot.json`
 and returns `stale-review` when the reviewed source changed; run `snapshot <slug>` after a fix and re-review.
 The minimum shell is Bash 3.2. macOS can use `/bin/bash`; Linux / Windows Git Bash use `bash`.
