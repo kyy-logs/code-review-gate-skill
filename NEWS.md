@@ -10,11 +10,7 @@ and evaluation artifacts out of this file.
 
 ### Added
 
-- code-review: run a one-time environment preflight (tool paths, versions, missing items) before review
-
-### Changed
-
-- code-review: `init` no longer writes `policy.json`; effective thresholds remain in the init JSON output
+- code-review: add environment preflight for v0.2.3
 
 <!-- UNRELEASED:END -->
 
