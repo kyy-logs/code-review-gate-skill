@@ -8,10 +8,9 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
-### Changed
+### Added
 
-- code-review: strengthen behavior-review evidence for delimiter whitespace and serialization round-trips
-- code-review: scope probe searches and caller discovery to the reviewed repository
+- code-review: strengthen behavior-review evidence for v0.2.4
 
 <!-- UNRELEASED:END -->
 
