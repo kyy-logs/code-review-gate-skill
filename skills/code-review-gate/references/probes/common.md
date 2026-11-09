@@ -11,8 +11,8 @@ Read this file before the probe-specific document. These rules apply to every pr
 
 - A finding must explain how this change introduced or triggered the issue. Describe unrelated pre-existing issues separately; they are not part of this round's finding list or counts.
 - Merge independent read-only queries where possible, run dependent queries step by step, and preserve accurate line numbers and necessary context on first reads of source.
-- Limit local searches to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates. Prefer `rg`, starting with changed files and known relevant directories and narrowing by file type; return only paths when locating files.
-- Expand the scope only for a specific evidence gap; avoid searching the whole repository with `grep -r` and then filtering the output. Record missing or unreadable evidence without expanding to the disk root or user directory, or repeating searches without a new lead.
+- Limit local searches to the reviewed repository, explicitly provided related directories, and cache paths corresponding to dependency coordinates. Start with changed files and known relevant directories, narrow by file type, and return only paths when locating files. For commit reviews, prefer `git grep <head> -- <paths>` to search the fixed target's tracked files; for worktree searches, use `rg` and exclude review output directories from source searches.
+- When locating callers, combine known method, type, and factory names in a scoped source/test search and reuse its matches and no-match scope. Expand only for a specific evidence gap with a new symbol or path lead; if the caller is outside the supplied repository, record that gap and continue the other behavior chains. Do not repeat equivalent searches or expand to the disk root or user directory.
 
 ## Output
 
