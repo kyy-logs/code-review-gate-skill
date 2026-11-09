@@ -4,7 +4,7 @@
 
 **基于证据的代码审查：优先静态分析，使用探针分工，并根据结果执行门禁。**
 
-技能源码位于 [`skills/code-review-gate/`](skills/code-review-gate/)（英文）和 [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.2.3`，版本号见 [VERSION](VERSION)。
+技能源码位于 [`skills/code-review-gate/`](skills/code-review-gate/)（英文）和 [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/)（中文），与宿主工具的安装目录分离。当前正式版本为 `v0.2.4`，版本号见 [VERSION](VERSION)。
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -18,13 +18,13 @@
 
 ## 最新动态
 
-### v0.2.3（2026-11-09）
+### v0.2.4（2026-11-10）
 
-本版本更新根据提交记录自动整理，详见 [NEWS](NEWS.md) 和 [Release](https://github.com/kyy-logs/code-review-gate-skill/releases/tag/v0.2.3)。
+本版本更新根据提交记录自动整理，详见 [NEWS](NEWS.md) 和 [Release](https://github.com/kyy-logs/code-review-gate-skill/releases/tag/v0.2.4)。
 
 ## 发布状态
 
-`v0.2.3` 是下述适用范围内的正式版本。1.0 之前的契约或格式变更会在 [NEWS](NEWS.md) 中说明。
+`v0.2.4` 是下述适用范围内的正式版本。1.0 之前的契约或格式变更会在 [NEWS](NEWS.md) 中说明。
 
 - **三级评级**：`high`、`medium`、`low`。此前四级版本写入的记录，包括包含 `critical` 值的记录，**不兼容**当前版本；`collect-metrics` 会拒绝这些记录。使用前请重新审查，或显式迁移记录。
 - **适用范围**：以静态分析为主，使用四个探针，以及从 JSON 派生的报告和门禁。不能替代测试、CI 或人工审查。

@@ -4,7 +4,7 @@ English | [简体中文](README.zh-CN.md)
 
 **Evidence-backed code review. Static-first, probe-driven, and gated.**
 
-The skill sources live in [`skills/code-review-gate/`](skills/code-review-gate/) (English) and [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.2.3`; see [VERSION](VERSION).
+The skill sources live in [`skills/code-review-gate/`](skills/code-review-gate/) (English) and [`skills/code-review-gate-zh/`](skills/code-review-gate-zh/) (Chinese), independently of any host's installation directory. The current stable release is `v0.2.4`; see [VERSION](VERSION).
 
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-skill-6B4FBB?style=flat-square)](https://claude.com/claude-code)
 [![Agent Skills](https://img.shields.io/badge/Agent%20Skills-standard-1f6feb?style=flat-square)](https://agentskills.io)
@@ -19,18 +19,18 @@ It never modifies the code under review.
 ## Latest news
 
 <!-- NEWS:START -->
-### v0.2.3 (2026-11-09)
+### v0.2.4 (2026-11-10)
 
 #### Added
 
-- code-review: add environment preflight for v0.2.3
+- code-review: strengthen behavior-review evidence for v0.2.4
 
 [Full update history](NEWS.md)
 <!-- NEWS:END -->
 
 ## Release status
 
-`v0.2.3` is a stable release within the scope described below.
+`v0.2.4` is a stable release within the scope described below.
 Pre-1.0 contract or format changes will be documented in [NEWS](NEWS.md).
 
 - **Severity is three levels:** `high`, `medium`, `low`. Records written by the
