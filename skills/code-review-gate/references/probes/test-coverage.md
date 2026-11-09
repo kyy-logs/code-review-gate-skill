@@ -57,13 +57,17 @@ Return the report path, target version, numerator/denominator, and percentage fo
 Record test quality, coverage status, and unverified items separately.
 `passed` does not mean the tests were run or coverage was measured.
 
-## 5. JaCoCo report parsing details (read when processing XML)
+## 5. JaCoCo incremental line calculation (read when processing XML)
 
-1. Identify production and test source per the project source sets, extract added or modified lines of the target version's production source, and exclude deleted lines.
-2. Match `<sourcefile>` / `<line nr="…" mi="…" ci="…">` by module, source path, and changed line numbers.
-   `mi + ci > 0` counts toward the denominator, and `ci > 0` counts as covered.
-3. Count each "module + source path + line number" only once; compute the ratio after aggregating, and do not average per-file percentages.
-4. Record `error` when required data is missing; do not exclude it as non-executable or record it as "not applicable".
+First confirm that the report corresponds to this target version, completely includes the mapped production source sets, and has line debug information. Once confirmed, use the read-only calculator:
 
-This is [JaCoCo's line coverage definition](https://www.jacoco.org/jacoco/trunk/doc/counters.html):
-a line counts as covered if at least one instruction in it executed, which does not mean all branches on that line were covered.
+```bash
+"${CODE_REVIEW_PYTHON:-python}" -X utf8 "$CODE_REVIEW_SKILL_DIR/scripts/coverage-diff.py" \
+  --project-root . --base {base} --head {head} \
+  --jacoco module/src/main/java module/target/site/jacoco/jacoco.xml \
+  --confirm-report-scope
+```
+
+- **Inputs**. For uncommitted changes, replace `--head {head}` with `--worktree`. Repeat `--jacoco SOURCE_ROOT XML` for multiple production roots, using non-overlapping project-relative POSIX paths and a separate report per root. `--confirm-report-scope` declares that the report conditions above have been checked; the script cannot establish them.
+- **Output**. Read JSON fields `status`, `covered_lines`, `executable_lines` and `percent`, then assess and hand off per section 3. `not_applicable` means no executable incremental lines; record failures as `error` per section 3. Compare thresholds using integer numerator and denominator. `percent` is a decimal string and cannot be passed directly to the integer-only `coverage --line`.
+- **Handoff**. Put calculation results in the relevant finding's `evidence` and the return message. Probe JSON follows `references/output-schema.md`; do not add a top-level `coverage` field or embed the entire calculation result.

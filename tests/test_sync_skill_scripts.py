@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SYNC = ROOT / 'scripts/sync-skill-scripts.py'
-SOURCES = ('collect-metrics', 'lib-metrics', 'rule-grep', 'sync-results.py')
+SOURCES = ('collect-metrics', 'lib-metrics', 'rule-grep', 'sync-results.py', 'coverage-diff.py')
 
 
 class SyncSkillScriptsTests(unittest.TestCase):
