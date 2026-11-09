@@ -47,6 +47,12 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
 
 1. **确定审查范围**：
 
+   主执行器开始时运行一次环境预检，读取 JSON 中的工具路径、版本及缺失项，按需交接可用命令给探针：
+   ```bash
+   "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$CODE_REVIEW_SKILL_DIR/scripts/check-environment.py"
+   ```
+   必需项失败时先处理环境问题；需指定 Bash 时加 `--bash /path/to/bash`。`rg` 缺失时使用返回的备用方式，未跟踪文件须单独读取。结果只返回 stdout，无需落盘；工具可用性以执行命令的环境为准。
+
    **选择模式**，未指定时默认审查未提交改动。下文的 base/head 均记录为具体 commit ID。
 
    - **未提交改动（worktree）**：base 为当前 HEAD。
@@ -77,7 +83,7 @@ description: 写完代码、提交前或合并 PR 时使用；用户说“帮我
    明确继续同一轮时复用原目录，不再次 init；不得同时派发两轮写入同一目录。
    将实际目录及有效阈值交给所有探针，覆盖注册表中的默认覆盖率参数。报告模板由 init 创建。
    修复后或收到 `stale-review` 时，先执行 `snapshot {slug}` 更新快照，再重跑受影响的探针、重新渲染报告并检查门禁。
-   源码检查只读；本流程会写报告、探针 JSON、policy.json、review-snapshot.json、事件日志和归档指标。
+   源码检查只读；本流程会写报告、探针 JSON、review-snapshot.json、事件日志和归档指标。
 
 2. **读注册表，确定探针清单**：Read `references/probes.yaml`，按 `requires` 判断：
    - 指定了但缺失 / 不可读 → `error`

@@ -8,7 +8,13 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
-_No user-facing changes since the latest release._
+### Added
+
+- code-review: run a one-time environment preflight (tool paths, versions, missing items) before review
+
+### Changed
+
+- code-review: `init` no longer writes `policy.json`; effective thresholds remain in the init JSON output
 
 <!-- UNRELEASED:END -->
 

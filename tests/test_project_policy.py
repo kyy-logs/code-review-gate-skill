@@ -25,9 +25,13 @@ class ProjectPolicyTests(BehaviorFixture, unittest.TestCase):
 
     def test_output_root_and_init_do_not_overwrite_an_existing_run(self):
         output = self.root / 'review output'
-        self.policy(output_dir=str(output))
+        self.policy(output_dir=str(output), line_target=70, branch_target=60)
         result = self.command('init', 'fresh')
         self.assertEqual(result.returncode, 0, result.stderr)
+        policy = json.loads(result.stdout)
+        self.assertEqual(policy['line_target'], 70)
+        self.assertEqual(policy['branch_target'], 60)
+        self.assertFalse((output / 'active/fresh/policy.json').exists())
         report = output / 'active/fresh/code-review.md'
         self.assertTrue(report.is_file())
         report.write_text('existing report', encoding='utf-8')

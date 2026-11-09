@@ -12,6 +12,7 @@ from pathlib import Path
 
 
 SOURCES = (
+    'check-environment.py',
     'collect-metrics',
     'lib-metrics',
     'rule-grep',
