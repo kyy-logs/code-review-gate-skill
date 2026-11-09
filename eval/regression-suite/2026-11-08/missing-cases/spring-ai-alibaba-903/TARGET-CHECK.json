@@ -1,0 +1,53 @@
+{
+  "case_id": "spring-ai-alibaba-903",
+  "skill": "current 0.2.0 (code-review-gate, post-merge)",
+  "run_dir": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-903",
+  "targets_total": 3,
+  "hits": 0,
+  "targets": [
+    {
+      "target_index": 0,
+      "location": "DynamicAgentEntity.java:47",
+      "category": "Maintainability",
+      "status": "not_mentioned",
+      "reported_as_finding": false
+    },
+    {
+      "target_index": 1,
+      "location": "AgentServiceImpl.java:200",
+      "category": "Code Defect",
+      "status": "adjacent_only",
+      "reported_as_finding": false,
+      "note": "Run raised AgentServiceImpl.java:190 as an unverified NPE (`||` should be `&&`), not the target's space-bypass issue; oracle already records the target premise as invalid."
+    },
+    {
+      "target_index": 2,
+      "location": "InputTextAction.java:73",
+      "category": "Maintainability",
+      "status": "not_mentioned",
+      "reported_as_finding": false
+    }
+  ],
+  "extra_findings": {
+    "count": 2,
+    "items": [
+      {
+        "severity": "high",
+        "location": "MoveToAndClickAction.java:49",
+        "summary": "scroll-then-click mixes viewport and document coordinates",
+        "matches_historical_extra": true
+      },
+      {
+        "severity": "medium",
+        "location": "NavigateAction.java:42",
+        "summary": "rewrites non-lowercase http(s) absolute URLs to https://",
+        "matches_historical_extra": true
+      }
+    ]
+  },
+  "unverified_items": 1,
+  "probe_status": "failed",
+  "wall_ms": 266778,
+  "timed_out": false,
+  "conclusion": "0/3 targets, same as the historical old-skill run. Both source-verified extra bugs were still found; the two maintainability targets remain unreported."
+}

@@ -1,0 +1,8 @@
+{
+  "mode": "commits",
+  "base": "3555a95e7b888335d9f72e432eb4f9fb9640e8cd",
+  "head": "475f97aff123c4c9d00093c46e91780a87f299c0",
+  "changed_files": [
+    "community/tool-calls/spring-ai-alibaba-starter-tool-calling-alitranslate/src/main/java/com/alibaba/cloud/ai/toolcalling/alitranslate/AliTranslateProperties.java"
+  ]
+}

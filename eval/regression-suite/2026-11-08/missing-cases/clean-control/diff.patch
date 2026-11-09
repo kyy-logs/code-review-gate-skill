@@ -1,0 +1,12 @@
+diff --git a/community/tool-calls/spring-ai-alibaba-starter-tool-calling-alitranslate/src/main/java/com/alibaba/cloud/ai/toolcalling/alitranslate/AliTranslateProperties.java b/community/tool-calls/spring-ai-alibaba-starter-tool-calling-alitranslate/src/main/java/com/alibaba/cloud/ai/toolcalling/alitranslate/AliTranslateProperties.java
+index 8b4252b0f..1beaec4d8 100644
+--- a/community/tool-calls/spring-ai-alibaba-starter-tool-calling-alitranslate/src/main/java/com/alibaba/cloud/ai/toolcalling/alitranslate/AliTranslateProperties.java
++++ b/community/tool-calls/spring-ai-alibaba-starter-tool-calling-alitranslate/src/main/java/com/alibaba/cloud/ai/toolcalling/alitranslate/AliTranslateProperties.java
+@@ -60,6 +60,7 @@ public class AliTranslateProperties extends CommonToolCallProperties {
+ 		this.setSecretKey(accessKeySecret);
+ 	}
+ 
++	/** Returns the configured region. */
+ 	public String getRegion() {
+ 		return region;
+ 	}

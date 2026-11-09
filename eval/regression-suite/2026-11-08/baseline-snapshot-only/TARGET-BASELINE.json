@@ -1,0 +1,50 @@
+{
+  "baseline_id": "aacr-behavior-target-2026-11-08-best",
+  "policy": "Single best verified run per case is the target, per user decision. TARGET-STABILITY.json records the x04 repeat caveat but is not used to change acceptance.",
+  "cases": {
+    "spring-ai-alibaba-869": {
+      "source_run": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261104-113447-spring-ai-alibaba-869",
+      "target_check": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261104-113447-spring-ai-alibaba-869\\TARGET-CHECK.json",
+      "target": "strict 0/3 target hits; extra sourceLanguage finding recorded separately",
+      "current_status": "current 0.2.0: 0/3, same as historical; only the sourceLanguage high finding reported; env-prefix target still unmentioned"
+    },
+    "spring-ai-alibaba-903": {
+      "source_run": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261104-181631-spring-ai-alibaba-903-correct",
+      "target_check": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261104-181631-spring-ai-alibaba-903-correct\\TARGET-CHECK.json",
+      "target": "strict 0/3 target hits; extra scroll/click finding recorded separately",
+      "current_status": "current 0.2.0: 0/3, same as historical; both source-verified extra bugs still found"
+    },
+    "dbeaver-38915": {
+      "source_run": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261108-141720-dbeaver-38915-snapshot-only",
+      "target_check": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261108-141720-dbeaver-38915-snapshot-only\\TARGET-CHECK.json",
+      "target": "target 2 medium; extra DatabricksDataSource finding is not the target",
+      "current_status": "reused snapshot-only run; target 2 hit medium; 2026-11-08 repeats both missed and kept it in unverified_items",
+      "acceptance": "observational only (downgraded 2026-11-08). The refresh-path write into the runtime bootstrap config is confirmed, but persistence and user-visible impact are unproven; unverified_items is the correct classification. Do not use target 2 as a hard acceptance target."
+    },
+    "x04": {
+      "source_run": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261107-002713-x04-search-narrow",
+      "target_check": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261107-002713-x04-search-narrow\\TARGET-CHECK.json",
+      "target": "A high at StatisticsExtension.java:267; B medium at StatisticsExtension.java:221",
+      "current_status": "current 0.2.0 run1 A medium/B medium; run2 A/B missing"
+    },
+    "c04": {
+      "source_run": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261108-142753-c04-snapshot-only",
+      "target_check": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261108-142753-c04-snapshot-only\\TARGET-CHECK.json",
+      "target": "A fixed and not reported; B medium at StatisticsExtension.java:231",
+      "current_status": "reused snapshot-only run; A not reported, B hit medium"
+    },
+    "dbeaver-37564": {
+      "source_run": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261107-002143-dbeaver-37564-search-narrow",
+      "target_check": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261107-002143-dbeaver-37564-search-narrow\\TARGET-CHECK.json",
+      "target": "target 0 InputStream leak medium; target 1 known miss (not reported)",
+      "current_status": "current 0.2.0 target 0 hit medium; target 1 still not reported; 1 extra finding at line 295"
+    },
+    "clean-control": {
+      "source_run": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control",
+      "target_check": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control/TARGET-CHECK.json",
+      "target": "no target finding and no new false positive",
+      "current_status": "pass: 0 findings, 0 unverified on a comment-only clean diff"
+    }
+  },
+  "clean_control": "present (2026-11-08 run, passed)"
+}

@@ -1,0 +1,26 @@
+{
+  "regression_id": "contract-severity-2026-11-08",
+  "change": "output-schema.md: public state query/state-machine contract violation is a contract-boundary error, not downgraded to medium for lack of callers/data corruption/concurrency-only impact.",
+  "skill_tree_sha256": "12cecfc3712872cec5d2ef4a3945e71f84e468debd68b77d0241fb9e41e7f7d6",
+  "x04": {
+    "target": "A high / B medium",
+    "result": "A high 2/3, B medium 3/3 in experiment; meets target",
+    "source": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\experiments\\20261108-contract-severity\\RESULT.json"
+  },
+  "dbeaver-37564": {
+    "target": "target 0 medium; target 1 known miss",
+    "result": "target 0 hit medium; target 1 not reported; no extra finding",
+    "status": "pass target"
+  },
+  "c04": {
+    "target": "A not reported; B medium",
+    "result": "A not reported; B medium; 1 extra medium at 282",
+    "status": "pass target, extra recorded"
+  },
+  "dbeaver-38915": {
+    "target": "target 2 medium",
+    "result": "new skill r1/r2: not reported (0/2); old skill control r2: also not reported (old total 1/2)",
+    "status": "unstable target; no evidence the change caused the miss, but target not met in these runs"
+  },
+  "conclusion": "The change meets the x04 target and leaves 37564/c04 targets intact. 38915 target 2 is unstable on both old and new skill; cannot attribute the miss to this change. Needs more samples before claiming 38915 regression or non-regression."
+}

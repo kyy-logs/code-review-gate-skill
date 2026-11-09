@@ -1,0 +1,87 @@
+{
+  "baseline_id": "aacr-behavior-2026-11-08-current-0.2.0",
+  "status": "target fixed to best run; 0.2.0 measured on x04 (2 runs), dbeaver-37564 (1), dbeaver-38915 (2), c04 (1 reused), plus 869/903/clean-control measured 2026-11-08",
+  "skill_source_commit": "c0c8e5e",
+  "skill_source_note": "c0c8e5e..origin/main changes only VERSION, NEWS.md, .github/workflows/skill-validation.yml; skill content is the 0.2.0 release skill.",
+  "skill_tree_sha256": "ff0847a969344ba5c030a2a496a87cd35acd026f5f4ce5038b449ff3a8d21eff",
+  "model": "deepseek-flash[1m]",
+  "effort": "high",
+  "deadline_seconds": 600,
+  "runs": {
+    "x04": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-163751-x04-release020",
+      "wall_ms": 363128,
+      "timed_out": false,
+      "json_valid": true,
+      "target_check": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-163751-x04-release020\\TARGET-CHECK.json"
+    },
+    "dbeaver-37564": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-163751-dbeaver-37564-release020",
+      "wall_ms": 294479,
+      "timed_out": false,
+      "json_valid": true,
+      "target_check": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-163751-dbeaver-37564-release020\\TARGET-CHECK.json"
+    },
+    "x04-repeat1": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-165036-x04-release020-r2",
+      "wall_ms": 274566,
+      "timed_out": false,
+      "json_valid": true,
+      "target_check": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\runs\\20261108-165036-x04-release020-r2\\TARGET-CHECK.json"
+    },
+    "spring-ai-alibaba-869": {
+      "run_dir": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-869",
+      "wall_ms": 393765,
+      "timed_out": false,
+      "json_valid": true,
+      "target_check": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-869/TARGET-CHECK.json"
+    },
+    "spring-ai-alibaba-903": {
+      "run_dir": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-903",
+      "wall_ms": 266778,
+      "timed_out": false,
+      "json_valid": true,
+      "target_check": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/spring-ai-alibaba-903/TARGET-CHECK.json"
+    },
+    "clean-control": {
+      "run_dir": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control",
+      "wall_ms": 17405,
+      "timed_out": false,
+      "json_valid": true,
+      "target_check": "D:/projects/code-review-publish/eval/regression-suite/2026-11-08/missing-cases/clean-control/TARGET-CHECK.json"
+    }
+  },
+  "reused": {
+    "dbeaver-38915": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261108-141720-dbeaver-38915-snapshot-only",
+      "wall_ms": 584748,
+      "timed_out": false,
+      "target_check": "D:\\projects\\code-review-publish\\eval\\aacr-round2\\2026-11-04\\runs\\20261108-141720-dbeaver-38915-snapshot-only\\TARGET-CHECK.json"
+    },
+    "c04": {
+      "run_dir": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261108-142753-c04-snapshot-only",
+      "wall_ms": 479822,
+      "timed_out": false,
+      "target_check": "D:\\projects\\code-review-publish\\eval\\diagnostics-runs\\20261108-142753-c04-snapshot-only\\TARGET-CHECK.json"
+    }
+  },
+  "missing": [],
+  "gap_summary": {
+    "x04": "run1: A medium < high, B medium hit; run2: A/B missing, only extra finding. x04 unstable on 0.2.0 (1/2 B, 0/2 A-high).",
+    "dbeaver-37564": "target 0 medium hit; target 1 known miss remains; 1 extra finding.",
+    "spring-ai-alibaba-869": "0/3 targets, same as historical; only the sourceLanguage high finding was produced; env-prefix target still unmentioned.",
+    "spring-ai-alibaba-903": "0/3 targets, same as historical; both source-verified extra bugs (scroll-click coordinates, URL scheme) still found.",
+    "clean-control": "Passed: 0 findings, 0 unverified on a comment-only clean diff (no false positives)."
+  },
+  "target_baseline": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\baseline-snapshot-only\\TARGET-BASELINE.json",
+  "target_policy": "Single best verified run per case is the target, per user decision. TARGET-STABILITY.json records the x04 repeat caveat but is not used to change acceptance.",
+  "target_gap": {
+    "x04": "A high target not met: run1 medium, run2 missing. B medium hit only in run1. Main gap.",
+    "dbeaver-37564": "Target 0 medium met; target 1 still known miss; one target-external medium finding at line 295.",
+    "dbeaver-38915": "Target 2 medium met in reused run.",
+    "c04": "A not reported (fixed); B medium met in reused run.",
+    "spring-ai-alibaba-869": "0/3 targets on 0.2.0.",
+    "spring-ai-alibaba-903": "0/3 targets on 0.2.0; two real extra bugs still found.",
+    "clean-control": "Passed with 0 findings."
+  }
+}

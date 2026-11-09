@@ -1,0 +1,106 @@
+{
+  "experiment_id": "x04-contract-severity-2026-11-08",
+  "purpose": "Test a generic contract-boundary severity clarification against the x04 target.",
+  "base_skill": "0.2.0 / c0c8e5e",
+  "base_skill_tree_sha256": "ff0847a969344ba5c030a2a496a87cd35acd026f5f4ce5038b449ff3a8d21eff",
+  "experiment_skill_tree_sha256": "12cecfc3712872cec5d2ef4a3945e71f84e468debd68b77d0241fb9e41e7f7d6",
+  "change": "Added to output-schema.md: public state query/state-machine contract violation is itself a contract-boundary error; do not downgrade to medium because there are no callers, no data corruption was observed, or the impact is only concurrency resources.",
+  "target": "A high at StatisticsExtension.java:267; B medium at StatisticsExtension.java:221",
+  "runs": [
+    {
+      "case_id": "x04",
+      "experiment_run": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\experiments\\20261108-contract-severity\\runs\\r1",
+      "skill_tree_sha256": "12cecfc3712872cec5d2ef4a3945e71f84e468debd68b77d0241fb9e41e7f7d6",
+      "targets_total": 2,
+      "hits": 2,
+      "targets": [
+        {
+          "target_index": "A",
+          "status": "hit",
+          "severity": "high",
+          "expected_severity": "high",
+          "location": "StatisticsExtension.java:93",
+          "finding_id": "behavior-review-1"
+        },
+        {
+          "target_index": "B",
+          "status": "hit",
+          "severity": "medium",
+          "expected_severity": "medium",
+          "location": "StatisticsExtension.java:221",
+          "finding_id": "behavior-review-2"
+        }
+      ],
+      "extra_findings": 1,
+      "extra_finding_ids": [
+        "behavior-review-3"
+      ],
+      "unverified_items": 2,
+      "conclusion": "r1: A high / B medium"
+    },
+    {
+      "case_id": "x04",
+      "experiment_run": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\experiments\\20261108-contract-severity\\runs\\r2",
+      "skill_tree_sha256": "12cecfc3712872cec5d2ef4a3945e71f84e468debd68b77d0241fb9e41e7f7d6",
+      "targets_total": 2,
+      "hits": 1,
+      "targets": [
+        {
+          "target_index": "A",
+          "status": "severity_below_target",
+          "severity": "medium",
+          "expected_severity": "high",
+          "location": "StatisticsExtension.java:266",
+          "finding_id": "behavior-review-2"
+        },
+        {
+          "target_index": "B",
+          "status": "hit",
+          "severity": "medium",
+          "expected_severity": "medium",
+          "location": "StatisticsExtension.java:221",
+          "finding_id": "behavior-review-1"
+        }
+      ],
+      "extra_findings": 0,
+      "extra_finding_ids": [],
+      "unverified_items": 2,
+      "conclusion": "r2: A medium / B medium"
+    },
+    {
+      "case_id": "x04",
+      "experiment_run": "D:\\projects\\code-review-publish\\eval\\regression-suite\\2026-11-08\\experiments\\20261108-contract-severity\\runs\\r3",
+      "skill_tree_sha256": "12cecfc3712872cec5d2ef4a3945e71f84e468debd68b77d0241fb9e41e7f7d6",
+      "targets_total": 2,
+      "hits": 2,
+      "targets": [
+        {
+          "target_index": "A",
+          "status": "hit",
+          "severity": "high",
+          "expected_severity": "high",
+          "location": "StatisticsExtension.java:266",
+          "finding_id": "behavior-review-1"
+        },
+        {
+          "target_index": "B",
+          "status": "hit",
+          "severity": "medium",
+          "expected_severity": "medium",
+          "location": "StatisticsExtension.java:221",
+          "finding_id": "behavior-review-2"
+        }
+      ],
+      "extra_findings": 0,
+      "extra_finding_ids": [],
+      "unverified_items": 2,
+      "conclusion": "r3: A high / B medium"
+    }
+  ],
+  "summary": {
+    "A_high": 2,
+    "B_medium": 3,
+    "total_runs": 3
+  },
+  "conclusion": "A high 2/3 and B medium 3/3; meets the suite 2/3 stability recommendation. Port the generic rule to both language packages and regression-test the other cases."
+}
