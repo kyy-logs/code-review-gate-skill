@@ -46,6 +46,12 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
 
 1. **Determine the review scope**:
 
+   At the start, the main executor runs the environment check once. Read tool paths, versions, and missing items from its JSON and hand off usable commands to probes as needed:
+   ```bash
+   "${CODE_REVIEW_PYTHON:-python}" -X utf8 "$CODE_REVIEW_SKILL_DIR/scripts/check-environment.py"
+   ```
+   Resolve failed required checks first; add `--bash /path/to/bash` to select Bash explicitly. If `rg` is missing, use the returned fallback and read untracked files separately. Results go to stdout and need no artifact file; tool availability applies to the environment running the command.
+
    **Choose a mode**; when unspecified, review uncommitted changes by default. The base/head below are recorded as concrete commit IDs.
 
    - **Uncommitted changes (worktree)**: base is the current HEAD.
@@ -77,7 +83,7 @@ The artifact root `{output_root}` defaults to `docs/work`; override it with proj
    Never dispatch two runs writing the same directory. Pass the actual directory and effective targets to all probes,
    overriding the registry's coverage defaults. Init creates the report template.
    After a fix or a `stale-review` result, run `snapshot {slug}` to update the snapshot, re-run the affected probes, re-render the report, and check the gate again.
-   Source inspection is read-only; the workflow writes reports, probe JSON, policy.json, review-snapshot.json, events, and archive metrics.
+   Source inspection is read-only; the workflow writes reports, probe JSON, review-snapshot.json, events, and archive metrics.
 
 2. **Read the registry and determine the probe list**: Read `references/probes.yaml` and decide by `requires`:
    - Specified but missing / unreadable → `error`
