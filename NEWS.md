@@ -8,11 +8,15 @@ and evaluation artifacts out of this file.
 <!-- UNRELEASED:START -->
 ## Unreleased
 
+_No user-facing changes since the latest release._
+
+<!-- UNRELEASED:END -->
+
+## v0.2.3 (2026-11-09)
+
 ### Added
 
 - code-review: add environment preflight for v0.2.3
-
-<!-- UNRELEASED:END -->
 
 ## v0.2.2 (2026-11-09)
 
