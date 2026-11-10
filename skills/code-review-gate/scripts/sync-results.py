@@ -77,7 +77,7 @@ def runtime_config(project, configuration):
     path = project / '.code-review/config.json'
     data = load_record(path) if path.exists() else {}
     fields(data, (), ('output_dir', 'line_target', 'branch_target'), 'project policy')
-    registry_data = yaml.load(Path(configuration).read_text(encoding='utf-8-sig'), Loader=UniqueLoader)
+    registry_data = load_yaml_unique(Path(configuration))
     params = next((p.get('params', {}) for p in registry_data['probes']
                    if p['name'] == 'test-coverage'), {})
     result = {}
@@ -425,15 +425,24 @@ def init_review(project, configuration, slug, mode=None, base=None, head=None):
     print(json.dumps(result))
 
 
-class UniqueLoader(yaml.SafeLoader):
-    pass
+def check_yaml_mapping(node):
+    if isinstance(node, yaml.MappingNode):
+        seen = set()
+        for key_node, value_node in node.value:
+            require(isinstance(key_node, yaml.ScalarNode), 'YAML mapping keys must be scalars')
+            key = key_node.value
+            require(key not in seen, f'重复字段: {key}')
+            seen.add(key)
+            check_yaml_mapping(value_node)
+    elif isinstance(node, yaml.SequenceNode):
+        for child in node.value:
+            check_yaml_mapping(child)
 
 
-def yaml_mapping(loader, node):
-    return unique_object(loader.construct_pairs(node, deep=True))
-
-
-UniqueLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, yaml_mapping)
+def load_yaml_unique(path):
+    content = path.read_text(encoding='utf-8-sig')
+    check_yaml_mapping(yaml.compose(content, Loader=yaml.SafeLoader))
+    return yaml.safe_load(content)
 
 
 def text(value, label):
@@ -453,7 +462,7 @@ def load_record(path):
 
 
 def registry(path):
-    data = yaml.load(path.read_text(encoding='utf-8-sig'), Loader=UniqueLoader)
+    data = load_yaml_unique(path)
     require(isinstance(data, dict) and isinstance(data.get('probes'), list) and data['probes'], '注册表缺少 probes 清单')
     probes = {}
     for item in data['probes']:

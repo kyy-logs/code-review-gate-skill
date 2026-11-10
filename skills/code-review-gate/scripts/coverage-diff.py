@@ -17,8 +17,7 @@ def require(condition, message):
 
 
 def git(project, *args):
-    result = subprocess.run(['git', '-C', str(project), *args], capture_output=True,
-                            env=dict(os.environ, GIT_OPTIONAL_LOCKS='0'))
+    result = subprocess.run(['git', '-C', str(project), *args], capture_output=True)
     require(result.returncode == 0, result.stderr.decode('utf-8', 'replace').strip())
     return result.stdout
 

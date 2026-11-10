@@ -109,7 +109,7 @@ int debitWithCheck(@Param("id") Long id, @Param("amount") Long amount);
 **In high-concurrency code, do not use equality checks as interruption/exit conditions (MULT-CONC-004):**
 
 ```java
-// Wrong: may loop forever
+// Wrong: equality check may never become true
 while (count == 0) {
     // may never exit
 }

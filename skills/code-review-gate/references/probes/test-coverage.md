@@ -26,7 +26,7 @@ Using the relevant tests and the code under test, check the tests themselves:
 - **Stability**: do they depend on execution order, unstable time, or an uncontrollable external environment?
 - **Test changes**: were relevant tests deleted, skipped, commented out, or weakened? Judge with the reason and any substitute verification whether valid checks were lost; do not mark it high based merely on a deletion or a skip / pending marker.
 
-These checks are static judgments: do not modify the implementation or automatically run mutation testing, and do not present them as executed verification. Meeting coverage targets does not establish test effectiveness.
+These checks are static judgments: do not modify the implementation or perform mutation testing, and do not present them as executed verification. Meeting coverage targets does not establish test effectiveness.
 
 Produce findings only for proven defects in the tests themselves or for scenario / assertion gaps, stating the location, expected-behavior basis, and risk; describe the gap within the actually checked test scope.
 When expected behavior is still under contract dispute, record an unverified item and do not presuppose assertion outcomes. Grade per `references/output-schema.md`; a missing test is not automatically high.
