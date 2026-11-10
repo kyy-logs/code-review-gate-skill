@@ -14,9 +14,12 @@ _No user-facing changes since the latest release._
 
 ## v0.2.4 (2026-11-10)
 
-### Added
+### Changed
 
-- code-review: strengthen behavior-review evidence for v0.2.4
+- code-review: behavior review requires a concrete delimiter-whitespace input pair and traces match result, field/default, validation, and use
+- code-review: serialization review inspects the encoder/renderer/decoder and traces a quote, backslash, or newline input; unresolved decisive implementations go to `unverified_items`
+- code-review: when repository calls or tests establish the path, a missing external production caller is an impact-scope gap, not a blocker
+- code-review: probe searches prefer `git grep <head>` for commit reviews and scope caller discovery
 
 ## v0.2.3 (2026-11-09)
 
